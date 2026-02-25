@@ -1,4 +1,12 @@
-﻿venv/
+venv/
 __pycache__/
 *.py[cod]
 models/churn_pipeline.joblib
+models/logistic*.joblib
+models/logistic*_info.json
+models/mlp*.joblib
+models/mlp*_info.json
+models/xgb*.joblib
+models/xgb*_info.json
+models/stacking*.joblib
+models/stacking*_info.json
