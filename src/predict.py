@@ -1,4 +1,4 @@
-﻿import argparse
+import argparse
 import json
 from pathlib import Path
 
@@ -59,6 +59,12 @@ def main():
         default='{"0":"No Churn","1":"Churn"}',
         help="JSON dict mapping predicted class to label",
     )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.5,
+        help="Probability threshold for churn class (default: 0.5)",
+    )
     args = parser.parse_args()
 
     model_path = Path(args.model)
@@ -69,14 +75,20 @@ def main():
     feature_map = parse_kv_pairs(args.input)
 
     X_new = pd.DataFrame([feature_map])
-    pred = int(pipeline.predict(X_new)[0])
-    prob = float(pipeline.predict_proba(X_new)[0, 1])
+    if hasattr(pipeline, "predict_proba"):
+        prob = float(pipeline.predict_proba(X_new)[0, 1])
+        pred = int(prob >= args.threshold)
+    else:
+        pred = int(pipeline.predict(X_new)[0])
+        prob = None
 
     labels = json.loads(args.labels)
     pred_label = labels.get(str(pred), str(pred))
 
     print(f"Predicted class: {pred} ({pred_label})")
-    print(f"Churn probability: {prob:.4f}")
+    if prob is not None:
+        print(f"Churn probability: {prob:.4f}")
+        print(f"Decision threshold: {args.threshold:.2f}")
 
 
 if __name__ == "__main__":
