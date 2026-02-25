@@ -9,3 +9,5 @@ scipy>=1.11
 google-generativeai>=0.5
 python-dotenv>=1.0
 tqdm>=4.65
+streamlit>=1.30
+pytest>=7.0
