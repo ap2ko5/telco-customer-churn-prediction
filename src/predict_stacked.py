@@ -280,7 +280,7 @@ def main() -> None:
     print(f"  Churn Probability       : {result['churn_probability']:.1%}")
     print(f"  Risk Band               : {result['risk_band']}")
     print(f"  Expected Revenue Loss   : ${result['expected_revenue_loss']:,.2f}")
-    print(f"  ── Base Model Details ──────────────────────")
+    print("  -- Base Model Details ----------------------")
     print(f"  XGBoost probability     : {result['xgb_probability']:.4f}")
     print(f"  Neural Net probability  : {result['nn_probability']:.4f}")
     print(f"  Stacked (final)         : {result['churn_probability']:.4f}")
@@ -288,12 +288,12 @@ def main() -> None:
 
     # Actionable message
     if result["risk_band"] in ("High", "Critical"):
-        print(f"\n⚠  ACTION REQUIRED: {result['risk_band']} risk customer!")
-        print("   → Recommend AI-driven retention outreach immediately.\n")
+        print(f"\n[!] ACTION REQUIRED: {result['risk_band']} risk customer!")
+        print("   -> Recommend AI-driven retention outreach immediately.\n")
     elif result["risk_band"] == "Medium":
-        print("\n  Medium risk — consider standard retention campaign.\n")
+        print("\n  Medium risk - consider standard retention campaign.\n")
     else:
-        print("\n  Low risk — no immediate action required.\n")
+        print("\n  Low risk - no immediate action required.\n")
 
 
 if __name__ == "__main__":
