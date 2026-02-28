@@ -1,13 +1,19 @@
 """
-business_impact.py — Compute expected revenue loss and rank customers.
+business_impact.py
+==================
+Compute expected revenue loss per customer and rank by financial risk.
 
 Formula:
-  expected_revenue_loss = churn_probability × MonthlyCharges × estimated_remaining_months
-  estimated_remaining_months = max(0, ESTIMATED_CONTRACT_MONTHS - tenure)
+  expected_revenue_loss = P(churn) × MonthlyCharges × max(0, CONTRACT_MONTHS − tenure)
+
+Interpretation: the expected dollar value the business will lose if this
+customer churns, assuming they would have remained for the rest of their
+typical contract period.
 """
 from __future__ import annotations
 
-import numpy as np
+import logging
+
 import pandas as pd
 
 from config import (
@@ -18,49 +24,34 @@ from config import (
     TENURE_COL,
 )
 
+logger = logging.getLogger(__name__)
+
+
+def _resolve_column(df: pd.DataFrame, col: str, fallback: float) -> pd.Series:
+    """Return a numeric Series for *col*, filling missing values with *fallback*."""
+    if col in df.columns:
+        return pd.to_numeric(df[col], errors="coerce").fillna(fallback)
+    logger.warning("Column '%s' not found — using fallback value %.1f.", col, fallback)
+    return pd.Series(fallback, index=df.index)
+
 
 def compute_business_impact(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Add expected_revenue_loss column and sort by it descending.
+    Add ``expected_revenue_loss`` column and sort by it descending.
 
-    Handles missing MonthlyCharges / tenure with fallback values.
+    The sort makes the highest-value customers appear first in exports
+    and reports, so business teams can immediately prioritise outreach.
     """
     df = df.copy()
 
-    # Resolve monthly charges
-    if MONTHLY_CHARGES_COL in df.columns:
-        monthly = pd.to_numeric(df[MONTHLY_CHARGES_COL], errors="coerce").fillna(
-            FALLBACK_MONTHLY_CHARGES
-        )
-    else:
-        print(
-            f"[business_impact] '{MONTHLY_CHARGES_COL}' column not found. "
-            f"Using fallback ${FALLBACK_MONTHLY_CHARGES:.0f}/month."
-        )
-        monthly = pd.Series(FALLBACK_MONTHLY_CHARGES, index=df.index)
-
-    # Resolve tenure
-    if TENURE_COL in df.columns:
-        tenure = pd.to_numeric(df[TENURE_COL], errors="coerce").fillna(FALLBACK_TENURE)
-    else:
-        print(
-            f"[business_impact] '{TENURE_COL}' column not found. "
-            f"Using fallback tenure={FALLBACK_TENURE} months."
-        )
-        tenure = pd.Series(FALLBACK_TENURE, index=df.index)
-
+    monthly   = _resolve_column(df, MONTHLY_CHARGES_COL, FALLBACK_MONTHLY_CHARGES)
+    tenure    = _resolve_column(df, TENURE_COL,           FALLBACK_TENURE)
     remaining = (ESTIMATED_CONTRACT_MONTHS - tenure).clip(lower=0)
 
-    df["expected_revenue_loss"] = (
-        df["churn_probability"] * monthly * remaining
-    ).round(2)
-
+    df["expected_revenue_loss"] = (df["churn_probability"] * monthly * remaining).round(2)
     df = df.sort_values("expected_revenue_loss", ascending=False)
 
-    total_at_risk = df["expected_revenue_loss"].sum()
-    print(
-        f"[business_impact] Total expected revenue at risk: "
-        f"${total_at_risk:,.2f}"
+    logger.info(
+        "Total expected revenue at risk: $%,.2f", df["expected_revenue_loss"].sum()
     )
-
     return df

@@ -1,8 +1,23 @@
 """
-Central configuration for the Stacked Churn Intelligence System.
-All hyperparameters, paths, and constants live here.
+config.py
+=========
+Single source of truth for every hyperparameter, path, and constant
+in the Stacked Churn Intelligence System.
+
+Rule: nothing in src/ or app.py imports a magic number directly —
+      everything comes from here.
 """
+from __future__ import annotations
+
+import logging
 from pathlib import Path
+
+# ── Logging ────────────────────────────────────────────────────────────────────
+logging.basicConfig(
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    datefmt="%H:%M:%S",
+    level=logging.INFO,
+)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -11,9 +26,8 @@ MODELS_DIR   = PROJECT_ROOT / "models"
 OUTPUTS_DIR  = PROJECT_ROOT / "outputs"
 LOGS_DIR     = PROJECT_ROOT / "logs"
 
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
-OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
+for _dir in (MODELS_DIR, OUTPUTS_DIR, LOGS_DIR):
+    _dir.mkdir(parents=True, exist_ok=True)
 
 # ── Reproducibility ────────────────────────────────────────────────────────────
 RANDOM_STATE = 42
@@ -22,10 +36,11 @@ RANDOM_STATE = 42
 TARGET_COLUMN = "Churn"
 TEST_SIZE     = 0.2
 
-ID_COLUMNS = ["customerID", "customer_id", "id", "ID", "CustomerID"]  # dropped automatically
+# Columns that are identifiers — dropped automatically before training
+ID_COLUMNS = {"customerID", "customer_id", "id", "ID", "CustomerID"}
 
 # ── XGBoost Hyperparameters ────────────────────────────────────────────────────
-XGB_PARAMS = {
+XGB_PARAMS: dict = {
     "max_depth":        4,
     "learning_rate":    0.05,
     "n_estimators":     300,
@@ -38,7 +53,7 @@ XGB_PARAMS = {
 XGB_EARLY_STOPPING_ROUNDS = 50
 
 # ── Neural Network Hyperparameters ─────────────────────────────────────────────
-NN_PARAMS = {
+NN_PARAMS: dict = {
     "hidden_layer_sizes": (256, 128, 64),
     "activation":         "relu",
     "solver":             "adam",
@@ -56,41 +71,42 @@ NN_PARAMS = {
 N_FOLDS = 5
 
 # ── Meta-model ─────────────────────────────────────────────────────────────────
-META_LR_PARAMS = {
+META_LR_PARAMS: dict = {
     "C":            1.0,
     "max_iter":     1000,
     "random_state": RANDOM_STATE,
 }
 
 # ── Calibration ────────────────────────────────────────────────────────────────
-CALIBRATION_METHOD = "isotonic"   # "isotonic" or "sigmoid" (Platt Scaling)
+CALIBRATION_METHOD = "isotonic"   # "isotonic" | "sigmoid" (Platt Scaling)
 CALIBRATION_CV     = 3
 
 # ── Risk Band Thresholds ───────────────────────────────────────────────────────
-RISK_BANDS = {
-    "Low":      (0.0, 0.3),
-    "Medium":   (0.3, 0.6),
-    "High":     (0.6, 0.8),
-    "Critical": (0.8, 1.01),
+# Each band is a half-open interval [lo, hi).  Exactly 1.0 is handled as Critical.
+RISK_BANDS: dict[str, tuple[float, float]] = {
+    "Low":      (0.0,  0.3),
+    "Medium":   (0.3,  0.6),
+    "High":     (0.6,  0.8),
+    "Critical": (0.8,  1.01),   # 1.01 so P=1.0 is caught by the range check
 }
 
 # ── Business Impact ────────────────────────────────────────────────────────────
-MONTHLY_CHARGES_COL         = "MonthlyCharges"
-TENURE_COL                  = "tenure"
-ESTIMATED_CONTRACT_MONTHS   = 24       # heuristic: typical contract length
-FALLBACK_MONTHLY_CHARGES    = 65.0     # median-ish if column missing
-FALLBACK_TENURE             = 12
+MONTHLY_CHARGES_COL       = "MonthlyCharges"
+TENURE_COL                = "tenure"
+ESTIMATED_CONTRACT_MONTHS = 24    # heuristic: typical contract length (months)
+FALLBACK_MONTHLY_CHARGES  = 65.0  # median-ish fallback when column is absent
+FALLBACK_TENURE           = 12    # fallback tenure when column is absent
 
-# ── Gemini API ─────────────────────────────────────────────────────────────────
-GEMINI_MODEL      = "gemini-2.0-flash"
-GEMINI_BATCH_SIZE = 5
-GEMINI_RETRY_MAX  = 3
-GEMINI_RETRY_WAIT = 5   # seconds between retries
-GEMINI_RATE_LIMIT_SLEEP = 1  # seconds between batches
+# ── Gemini AI ──────────────────────────────────────────────────────────────────
+GEMINI_MODEL            = "gemini-2.0-flash"
+GEMINI_BATCH_SIZE       = 5
+GEMINI_RETRY_MAX        = 3
+GEMINI_RETRY_WAIT       = 5   # seconds between retries
+GEMINI_RATE_LIMIT_SLEEP = 1   # seconds between batches
 
-# ── Outputs ────────────────────────────────────────────────────────────────────
-PREDICTIONS_CSV   = OUTPUTS_DIR / "churn_predictions.csv"
-SUMMARY_TXT       = OUTPUTS_DIR / "summary_report.txt"
-PROB_PLOT         = OUTPUTS_DIR / "prob_distribution.png"
-BAND_PLOT         = OUTPUTS_DIR / "band_distribution.png"
-SHAP_PLOT         = OUTPUTS_DIR / "shap_importance.png"
+# ── Output file paths ──────────────────────────────────────────────────────────
+PREDICTIONS_CSV = OUTPUTS_DIR / "churn_predictions.csv"
+SUMMARY_TXT     = OUTPUTS_DIR / "summary_report.txt"
+PROB_PLOT       = OUTPUTS_DIR / "prob_distribution.png"
+BAND_PLOT       = OUTPUTS_DIR / "band_distribution.png"
+SHAP_PLOT       = OUTPUTS_DIR / "shap_importance.png"

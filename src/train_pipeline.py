@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import annotations
 """
 train_pipeline.py - Main orchestration script for the Stacked Churn Intelligence System.
 
@@ -11,6 +10,7 @@ Optional:
   --no-calibration            Skip probability calibration
   --no-ai                     Skip AI retention recommendations
 """
+from __future__ import annotations
 import sys
 import os
 # Ensure UTF-8 output on Windows

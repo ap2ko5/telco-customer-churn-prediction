@@ -1,12 +1,39 @@
-venv/
+# ── Python ─────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# ── Environments ───────────────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+.env          # never commit real secrets
+
+# ── IDE ────────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ── Model artefacts (large binaries — use DVC or S3 for production) ────────────
+models/*.joblib
+models/pipeline_info.json
 models/churn_pipeline.joblib
-models/logistic*.joblib
-models/logistic*_info.json
-models/mlp*.joblib
-models/mlp*_info.json
-models/xgb*.joblib
-models/xgb*_info.json
-models/stacking*.joblib
-models/stacking*_info.json
+
+# ── Generated outputs ──────────────────────────────────────────────────────────
+outputs/*.csv
+outputs/*.png
+outputs/*.txt
+
+# ── Logs ───────────────────────────────────────────────────────────────────────
+logs/
+
+# ── Streamlit temp upload ──────────────────────────────────────────────────────
+_tmp_upload.csv
+
+# ── Test cache ─────────────────────────────────────────────────────────────────
+.pytest_cache/

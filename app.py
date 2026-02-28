@@ -376,12 +376,12 @@ with tab_charts:
     shap_path = OUTPUTS_DIR / "shap_importance.png"
     if shap_path.exists():
         st.subheader("SHAP Feature Importance")
-        st.image(str(shap_path), use_column_width=True)
+        st.image(str(shap_path), use_container_width=True)
 
     prob_dist_path = OUTPUTS_DIR / "prob_distribution.png"
     if prob_dist_path.exists():
         st.subheader("Probability Distribution (from last pipeline run)")
-        st.image(str(prob_dist_path), use_column_width=True)
+        st.image(str(prob_dist_path), use_container_width=True)
 
 
 # ────────────────────────────────────────────────────────
@@ -438,7 +438,7 @@ with tab_importance:
 
     shap_path = OUTPUTS_DIR / "shap_importance.png"
     if shap_path.exists():
-        st.image(str(shap_path), caption="SHAP feature importance from last pipeline run", use_column_width=True)
+        st.image(str(shap_path), caption="SHAP feature importance from last pipeline run", use_container_width=True)
         st.caption(
             "**How to read this chart:**\n\n"
             "Each bar shows how much that feature affects the churn prediction on average.\n"

@@ -1,51 +1,66 @@
-# Customer Churn Prediction
+# Telco Customer Churn Prediction
 
-This project trains churn models from a CSV dataset and predicts churn for new customer inputs.
+A stacked ensemble churn intelligence system using XGBoost + Neural Network + Meta-Model, with a Streamlit dashboard for business users.
 
-## 1) Put your dataset
+## 1) Dataset
+
 Place your CSV file at:
 
-`data/customer_churn.csv`
+```
+data/customer_churn.csv
+```
 
-The target column should be `Churn` (values like `Yes/No`, `1/0`, `True/False` are handled).
+The target column should be `Churn` (values like `Yes/No`, `1/0`, `True/False` are handled automatically). A `customerID` column is dropped automatically if present.
 
 ## 2) Install dependencies
+
 From your virtual environment:
 
 ```powershell
 pip install -r requirements.txt
 ```
 
-## 3) Train model
-Choose one model type: `logistic`, `xgboost`, `mlp`, or `stacking`.
+## 3) Train the pipeline
 
 ```powershell
-python src/train.py --data data/customer_churn.csv --target Churn --model-type xgboost
+python src/train_pipeline.py --data data/customer_churn.csv --target Churn
 ```
 
-Stacking example:
+**Optional flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--no-ai` | Skip Gemini AI retention recommendations |
+| `--no-calibration` | Skip probability calibration |
+| `--calibration-method` | `isotonic` (default) or `sigmoid` |
+| `--api-key YOUR_KEY` | Gemini API key (or set `GEMINI_API_KEY` in `.env`) |
+
+This saves model artifacts to `models/` and outputs to `outputs/`.
+
+## 4) Launch the dashboard
 
 ```powershell
-python src/train.py --data data/customer_churn.csv --target Churn --model-type stacking
+streamlit run app.py
 ```
 
-This saves:
-- `models/churn_pipeline.joblib`
-- `models/model_info.json`
+Upload any customer CSV in the sidebar to run live predictions.
 
-## 4) Predict for one current customer sample
-Pass feature values as key=value pairs:
+## 5) Predict for a single customer (CLI)
 
 ```powershell
-python src/predict.py --model models/churn_pipeline.joblib --threshold 0.5 --input gender=Female SeniorCitizen=0 Partner=Yes Dependents=No tenure=5 PhoneService=Yes MultipleLines=No InternetService=Fiber\ optic OnlineSecurity=No OnlineBackup=No DeviceProtection=No TechSupport=No StreamingTV=Yes StreamingMovies=Yes Contract=Month-to-month PaperlessBilling=Yes PaymentMethod=Electronic\ check MonthlyCharges=85.5 TotalCharges=450.2
+python src/predict_stacked.py --input tenure=2 MonthlyCharges=85.50 Contract=Month-to-month InternetService=Fiber optic
 ```
 
-Output includes:
-- Predicted churn class
-- Churn probability
-- Decision threshold used for classification
+Use `--run-id <run_id>` to target a specific training run instead of the latest.
+
+## 6) Run tests
+
+```powershell
+python -m pytest tests/ -v
+```
 
 ## Notes
-- Keep feature names exactly as dataset column names (except target).
-- If your dataset has `customerID`, it is dropped automatically.
-- Numeric-like text columns (for example `TotalCharges`) are auto-converted to numeric.
+
+- Keep feature names exactly as they appear in your dataset column headers.
+- Numeric-like text columns (e.g. `TotalCharges`) are auto-converted to numeric.
+- Model artifacts are versioned by run timestamp (e.g. `xgb_model_20260226_013000.joblib`).
