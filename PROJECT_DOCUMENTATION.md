@@ -51,7 +51,7 @@
 | Technology | Version (min) | Role |
 |---|---|---|
 | **Google Gemini API** (`google-generativeai`) | ≥ 0.5 | AI-powered personalized retention recommendation generation for High/Critical risk customers |
-| **Gemini 2.0 Flash** (model) | — | LLM used for structured JSON retention strategy generation |
+| **Gemini 2.5 Flash** (model) | — | LLM used for structured JSON retention strategy generation |
 
 ## 1.5 Configuration & Environment
 | Technology | Version (min) | Role |
@@ -216,7 +216,7 @@ telco-customer-churn-prediction/
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │  STEP 7 — AI RETENTION LAYER                                            │
-│  retention_ai.py (Google Gemini 2.0 Flash)                              │
+│  retention_ai.py (Google Gemini 2.5 Flash)                              │
 │                                                                          │
 │  Filter: churn_band IN ['High', 'Critical']                             │
 │                                                                          │
@@ -227,7 +227,7 @@ telco-customer-churn-prediction/
 │  │    risk_band }                            │                          │
 │  │         │                                │                          │
 │  │         ▼                                │                          │
-│  │  Gemini 2.0 Flash API                    │                          │
+│  Gemini 2.5 Flash API                    │                          │
 │  │         │                                │                          │
 │  │         ▼                                │                          │
 │  │  JSON Response:                          │                          │
@@ -495,7 +495,7 @@ predict.py (Inference CLI)
 |---|---|
 | FR-12.1 | The system SHALL process ONLY customers with `churn_band IN ['High', 'Critical']` |
 | FR-12.2 | For each eligible customer, the system SHALL construct a JSON payload with: `tenure`, `MonthlyCharges`, `TotalCharges`, `Contract`, `InternetService`, `PaymentMethod`, `TechSupport`, `OnlineSecurity`, `StreamingTV`, `StreamingMovies`, `MultipleLines`, `SeniorCitizen` |
-| FR-12.3 | The payload SHALL be sent to `gemini-2.0-flash` via `google.generativeai` client |
+| FR-12.3 | The payload SHALL be sent to `gemini-2.5-flash` via `google.generativeai` client |
 | FR-12.4 | The API response SHALL be parsed for JSON keys: `likely_churn_reason`, `risk_summary`, `retention_action`, `offer_recommendation`, `communication_tone` |
 | FR-12.5 | Customers SHALL be processed in batches of 5 |
 | FR-12.6 | Retry logic SHALL attempt up to 3 times with increasing wait on rate-limit errors (429 / quota) |
@@ -575,7 +575,7 @@ predict.py (Inference CLI)
 #### B.3 External API Interface
 | Interface | Protocol | Description |
 |---|---|---|
-| **Google Gemini API** | HTTPS REST (via SDK) | `google.generativeai` Python SDK; `gemini-2.0-flash` model; request: structured text prompt with JSON customer profile; response: JSON with 5 keys; rate-limit retry with exponential backoff |
+| **Google Gemini API** | HTTPS REST (via SDK) | `google.generativeai` Python SDK; `gemini-2.5-flash` model; request: structured text prompt with JSON customer profile; response: JSON with 5 keys; rate-limit retry with exponential backoff |
 
 ### C. Other Non-Functional Requirements
 
@@ -612,7 +612,7 @@ predict.py (Inference CLI)
 | 2 | **Reliable Probability Scores** | Isotonic Regression calibration fitted on held-out test set — critical for business decisions based on probability thresholds |
 | 3 | **Actionable Risk Segments** | 4-band risk classification (Low/Medium/High/Critical) translates model output into business-actionable customer groups |
 | 4 | **Revenue Impact Quantification** | `expected_revenue_loss` formula ties each customer's churn risk directly to financial impact, enabling ROI-based prioritization |
-| 5 | **Personalized AI Retention** | Gemini 2.0 Flash generates individualized 5-component retention strategies for High/Critical customers — not generic scripts |
+| 5 | **Personalized AI Retention** | Gemini 2.5 Flash generates individualized 5-component retention strategies for High/Critical customers — not generic scripts |
 | 6 | **Full Reproducibility** | `random_state=42` everywhere + serialized preprocessing + per-run JSON logs ensure experiments are fully reproducible |
 | 7 | **Explainability** | SHAP feature importance ensures model is interpretable for business stakeholders and regulatory review |
 | 8 | **Operational Readiness** | CLI interface, `.env` API key handling, modular design, graceful degradation — ready for cron-job or pipeline integration |

@@ -2,7 +2,7 @@
 retention_ai.py — AI-powered retention recommendations via Google Gemini.
 
 For High and Critical risk customers only:
-  - Sends a structured JSON payload to gemini-2.0-flash
+  - Sends a structured JSON payload to gemini-2.5-flash
   - Returns: churn reason, risk summary, retention action, offer, tone
   - Implements: batch processing, retry logic, rate-limit handling
   - Graceful fallback when API key is not set
@@ -61,7 +61,11 @@ def _build_payload(row: pd.Series) -> dict:
         # Flexible column match (case-insensitive alternatives)
         for col in row.index:
             if col.lower().replace("_", "") == field.lower().replace("_", ""):
-                profile[field] = row[col]
+                value = row[col]
+                # Convert numpy/pandas types to native Python types for JSON serialization
+                if hasattr(value, 'item'):
+                    value = value.item()
+                profile[field] = value
                 break
 
     return {
@@ -71,14 +75,11 @@ def _build_payload(row: pd.Series) -> dict:
     }
 
 
-def _call_gemini(client, prompt: str) -> str:
+def _call_gemini(model, prompt: str) -> str:
     """Call Gemini with retry logic and rate-limit handling."""
     for attempt in range(1, GEMINI_RETRY_MAX + 1):
         try:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=prompt,
-            )
+            response = model.generate_content(prompt)
             return response.text.strip()
         except Exception as exc:
             err_str = str(exc).lower()
@@ -155,7 +156,8 @@ def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
 
     try:
         import google.generativeai as genai
-        client = genai.Client(api_key=api_key)
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(GEMINI_MODEL)
     except ImportError:
         print("[retention_ai] google-generativeai not installed. Run: pip install google-generativeai")
         return df
@@ -188,7 +190,7 @@ def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
                 risk_band=payload["risk_band"],
             )
 
-            raw = _call_gemini(client, prompt)
+            raw = _call_gemini(model, prompt)
             results[idx] = _parse_response(raw)
 
         # Rate-limit buffer between batches

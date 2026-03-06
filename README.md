@@ -20,6 +20,16 @@ From your virtual environment:
 pip install -r requirements.txt
 ```
 
+## 2.5) Verify project connections (optional)
+
+Ensure all modules are properly connected:
+
+```powershell
+python verify_connections.py
+```
+
+This will check that all imports work and directories are in place.
+
 ## 3) Train the pipeline
 
 ```powershell
@@ -58,6 +68,26 @@ Use `--run-id <run_id>` to target a specific training run instead of the latest.
 ```powershell
 python -m pytest tests/ -v
 ```
+
+## 7) Demo AI recommendations
+
+Test the AI-powered retention recommendations:
+
+```powershell
+python scripts/demo_ai_recommendations.py
+```
+
+Requires `GEMINI_API_KEY` in `.env` file.
+
+---
+
+## 📚 Documentation
+
+- `README.md` - This quick start guide
+- `PROJECT_DOCUMENTATION.md` - Complete technical documentation
+- `PROJECT_STRUCTURE.md` - Module connections and architecture
+- `QUICK_REFERENCE.md` - Command reference and file locations
+- `STUDENT_GUIDE.md` - Educational walkthrough of the codebase
 
 ## Notes
 

@@ -175,7 +175,7 @@ FALLBACK_MONTHLY_CHARGES  = 65.0  # Use $65 if the actual charge is missing
 FALLBACK_TENURE           = 12    # Assume 12 months if tenure is missing
 
 # Gemini API settings
-GEMINI_MODEL      = "gemini-2.0-flash"   # Which Google AI model to use
+GEMINI_MODEL      = "gemini-2.5-flash"   # Which Google AI model to use
 GEMINI_BATCH_SIZE = 5                     # Process 5 customers at a time
 GEMINI_RETRY_MAX  = 3                     # Try 3 times before giving up
 GEMINI_RETRY_WAIT = 5                     # Wait 5 seconds between retries

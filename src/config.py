@@ -98,7 +98,7 @@ FALLBACK_MONTHLY_CHARGES  = 65.0  # median-ish fallback when column is absent
 FALLBACK_TENURE           = 12    # fallback tenure when column is absent
 
 # ── Gemini AI ──────────────────────────────────────────────────────────────────
-GEMINI_MODEL            = "gemini-2.0-flash"
+GEMINI_MODEL            = "gemini-2.5-flash"
 GEMINI_BATCH_SIZE       = 5
 GEMINI_RETRY_MAX        = 3
 GEMINI_RETRY_WAIT       = 5   # seconds between retries
