@@ -44,6 +44,7 @@ from config import (
     XGB_EARLY_STOPPING_ROUNDS,
 )
 from data_loader import load_data
+from explainability import add_top_churn_drivers
 from evaluation import compare_models, print_classification_report
 from nn_model import predict_proba_nn, train_nn
 from preprocessor import build_preprocessor, fit_preprocessor, transform
@@ -200,16 +201,26 @@ def main() -> None:
     print("\n-- Step 11: Business Impact Metrics --")
     result_df = compute_business_impact(result_df)
 
-    # ── 12. AI Retention Recommendations ─────────────────────────────────────
+    # ── 12. Per-Customer Explainability Drivers ──────────────────────────────
+    print("\n-- Step 12: Computing Per-Customer Explainability Drivers --")
+    result_df = add_top_churn_drivers(
+        df=result_df,
+        xgb_model=xgb_model,
+        X_transformed=X_all_t,
+        feature_names=feature_names,
+        top_n=3,
+    )
+
+    # ── 13. AI Retention Recommendations ─────────────────────────────────────
     if not args.no_ai:
-        print("\n-- Step 12: AI Retention Recommendations --")
+        print("\n-- Step 13: AI Retention Recommendations --")
         result_df = generate_retention_recommendations(result_df)
     else:
-        print("\n-- Step 12: AI Recommendations skipped (--no-ai) --")
+        print("\n-- Step 13: AI Recommendations skipped (--no-ai) --")
         result_df["retention_recommendation"] = "Skipped"
 
-    # ── 13. Reporting & Visualizations ───────────────────────────────────────
-    print("\n-- Step 13: Generating Reports & Visualizations --")
+    # ── 14. Reporting & Visualizations ───────────────────────────────────────
+    print("\n-- Step 14: Generating Reports & Visualizations --")
     generate_all_reports(
         df=result_df,
         xgb_model=xgb_model,

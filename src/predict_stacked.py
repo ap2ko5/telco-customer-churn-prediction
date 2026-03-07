@@ -279,7 +279,8 @@ def main() -> None:
     print("=" * 55)
     print(f"  Churn Probability       : {result['churn_probability']:.1%}")
     print(f"  Risk Band               : {result['risk_band']}")
-    print(f"  Expected Revenue Loss   : ${result['expected_revenue_loss']:,.2f}")
+    from indian_currency import format_indian_currency
+    print(f"  Expected Revenue Loss   : {format_indian_currency(result['expected_revenue_loss'])}")
     print("  -- Base Model Details ----------------------")
     print(f"  XGBoost probability     : {result['xgb_probability']:.4f}")
     print(f"  Neural Net probability  : {result['nn_probability']:.4f}")

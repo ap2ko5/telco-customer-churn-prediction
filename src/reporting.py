@@ -30,6 +30,7 @@ from config import (
     SHAP_PLOT,
     SUMMARY_TXT,
 )
+from indian_currency import format_indian_currency
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ def write_summary_report(df: pd.DataFrame) -> None:
         "  CHURN INTELLIGENCE – SUMMARY REPORT",
         "=" * 65,
         f"\nTotal customers analysed : {total:,}",
-        f"Total revenue at risk    : ${total_rev_risk:,.2f}\n",
+        f"Total revenue at risk    : {format_indian_currency(total_rev_risk)}\n",
         "-- Risk Band Distribution --",
     ]
     for band in BAND_ORDER:

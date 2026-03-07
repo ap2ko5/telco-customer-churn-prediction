@@ -9,7 +9,7 @@ Run with:
   streamlit run app.py
 
 Features:
-  - Tab 1  Overview    : KPI cards (total customers, % at risk, $ at risk)
+  - Tab 1  Overview    : KPI cards (total customers, % at risk, ₹ at risk)
   - Tab 2  Charts      : Risk band bar chart + probability histogram
   - Tab 3  Customers   : Sortable, filterable full prediction table
   - Tab 4  Importance  : SHAP feature importance image (if available)
@@ -170,12 +170,41 @@ def run_predictions(csv_bytes: bytes, target_col: str) -> pd.DataFrame:
 
 
 def fmt_currency(val: float) -> str:
-    """Format a dollar value with K/M suffix."""
-    if val >= 1_000_000:
-        return f"${val/1_000_000:.2f}M"
-    if val >= 1_000:
-        return f"${val/1_000:.1f}K"
-    return f"${val:,.0f}"
+    """Format a rupee value in Indian numbering system (Lakhs/Crores)."""
+    if val >= 10_000_000:  # 1 crore or more
+        return f"₹{val/10_000_000:.2f}Cr"
+    elif val >= 100_000:  # 1 lakh or more
+        return f"₹{val/100_000:.2f}L"
+    elif val >= 1_000:
+        return f"₹{_indian_grouping(str(int(val)))}"
+    return f"₹{val:,.0f}"
+
+
+def _indian_grouping(num_str: str) -> str:
+    """Apply Indian digit grouping (rightmost 3, then groups of 2)."""
+    num_str = num_str.replace(",", "")
+    if len(num_str) <= 3:
+        return num_str
+    result = num_str[-3:]
+    remaining = num_str[:-3]
+    while remaining:
+        if len(remaining) <= 2:
+            result = remaining + "," + result
+            break
+        else:
+            result = remaining[-2:] + "," + result
+            remaining = remaining[:-2]
+    return result
+
+
+def format_indian_rupees(val: float) -> str:
+    """Format value as Indian currency with proper grouping."""
+    if pd.isna(val):
+        return ""
+    integer_part = int(val)
+    decimal_part = val - integer_part
+    formatted_int = _indian_grouping(str(integer_part))
+    return f"₹{formatted_int}{decimal_part:.2f}"[:-3] if decimal_part == 0 else f"₹{formatted_int}.{int(decimal_part * 100):02d}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -343,11 +372,19 @@ with tab_overview:
     if "MonthlyCharges" in df.columns:
         top10_cols = top10_cols + ["MonthlyCharges"]
     available = [c for c in top10_cols if c in df.columns]
+    
+    # Apply Indian currency formatting
+    display_top10 = df.sort_values("expected_revenue_loss", ascending=False).head(10)[available].copy()
+    if "expected_revenue_loss" in display_top10.columns:
+        display_top10["expected_revenue_loss"] = display_top10["expected_revenue_loss"].apply(
+            lambda x: f"₹{_indian_grouping(str(int(x)))}.{int((x - int(x)) * 100):02d}" if pd.notna(x) else ""
+        )
+    
     st.dataframe(
-        df.sort_values("expected_revenue_loss", ascending=False)
-          .head(10)[available]
-          .style.background_gradient(subset=["churn_probability"], cmap="Reds")
-          .format({"churn_probability": "{:.1%}", "expected_revenue_loss": "${:,.2f}"}),
+        display_top10.style.background_gradient(
+            subset=["churn_probability"] if "churn_probability" in display_top10.columns else [], 
+            cmap="Reds"
+        ).format({"churn_probability": "{:.1%}"} if "churn_probability" in display_top10.columns else {}),
         use_container_width=True,
     )
 
@@ -408,14 +445,15 @@ with tab_customers:
     if not chosen_cols:
         chosen_cols = default_show
 
+    # Apply Indian currency formatting
+    display_final = display_df[chosen_cols].sort_values("churn_probability", ascending=False).reset_index(drop=True).copy()
+    if "expected_revenue_loss" in display_final.columns:
+        display_final["expected_revenue_loss"] = display_final["expected_revenue_loss"].apply(
+            lambda x: f"₹{_indian_grouping(str(int(x)))}.{int((x - int(x)) * 100):02d}" if pd.notna(x) else ""
+        )
+    
     st.dataframe(
-        display_df[chosen_cols]
-          .sort_values("churn_probability", ascending=False)
-          .reset_index(drop=True)
-          .style.format({
-              "churn_probability":    "{:.1%}",
-              "expected_revenue_loss": "${:,.2f}",
-          }),
+        display_final.style.format({"churn_probability": "{:.1%}"} if "churn_probability" in display_final.columns else {}),
         use_container_width=True,
         height=500,
     )

@@ -171,7 +171,7 @@ RISK_BANDS = {
 ```python
 # Business impact formula constants
 ESTIMATED_CONTRACT_MONTHS = 24    # Assume customers are on 2-year contracts
-FALLBACK_MONTHLY_CHARGES  = 65.0  # Use $65 if the actual charge is missing
+FALLBACK_MONTHLY_CHARGES  = 65.0  # Use ₹65 if the actual charge is missing
 FALLBACK_TENURE           = 12    # Assume 12 months if tenure is missing
 
 # Gemini API settings
@@ -1012,7 +1012,7 @@ Remaining Months = max(0, 24 - tenure)
 - Remaining = max(0, 24 - 6) = 18 months
 - Expected Loss = 0.85 × $90 × 18 = **$1,377**
 
-This turns a probability into a dollar figure — something executives understand and can assign budget to.
+This turns a probability into a rupee figure — something executives understand and can assign budget to.
 
 ## 🔍 `compute_business_impact(df)`
 
@@ -1022,14 +1022,14 @@ This turns a probability into a dollar figure — something executives understan
     else:
         monthly = pd.Series(FALLBACK_MONTHLY_CHARGES, index=df.index)
 ```
-> `.fillna(65.0)` → if MonthlyCharges is missing for some customers, use $65 (our configured fallback).
+> `.fillna(65.0)` → if MonthlyCharges is missing for some customers, use ₹65 (our configured fallback).
 > `pd.Series(65.0, index=df.index)` → create a series of 65.0 for every row if the column doesn't exist at all.
 
 ```python
     remaining = (ESTIMATED_CONTRACT_MONTHS - tenure).clip(lower=0)
 ```
 > `.clip(lower=0)` → if tenure > 24 months, remaining would be negative → clip to 0.
-> (A customer who's stayed 30 months on a "24-month contract" still has $0 remaining contract risk.)
+> (A customer who's stayed 30 months on a "24-month contract" still has ₹0 remaining contract risk.)
 
 ```python
     df["expected_revenue_loss"] = (
@@ -1567,7 +1567,7 @@ CLI input: tenure=6, MonthlyCharges=90.0, Contract=Month-to-month
       │
       ▼  Step 6: assign_risk_band(P_final) → "Critical"
       │
-      ▼  Step 7: estimate_revenue_loss(...) → $1,296.00
+      ▼  Step 7: estimate_revenue_loss(...) → ₹1,296.00
       │
       ▼  OUTPUT: Formatted result printed to terminal
 ```
@@ -1753,7 +1753,7 @@ st.download_button(
 
 | Tab | What you see | Business use |
 |---|---|---|
-| **Overview** | KPI cards: total customers, high-risk count, total $ at risk, avg probability | Executive summary |
+| **Overview** | KPI cards: total customers, high-risk count, total ₹ at risk, avg probability | Executive summary |
 | **Risk Charts** | Bar chart + histogram + SHAP image from outputs/ | Analyst review |
 | **Customer Table** | Searchable, filterable, sortable full table + CSV download | Retention team |
 | **Feature Importance** | SHAP image + pipeline config JSON | Data scientist |

@@ -64,7 +64,7 @@ class TestRevenueFormula:
         )
 
     def test_zero_churn_probability_gives_zero_loss(self):
-        """A customer with 0% churn probability should have $0 expected loss."""
+        """A customer with 0% churn probability should have ₹0 expected loss."""
         df = make_df(tenures=[12], monthly_charges=[75.0], churn_probs=[0.0])
         result = compute_business_impact(df)
         assert result["expected_revenue_loss"].iloc[0] == 0.0
@@ -78,7 +78,7 @@ class TestRevenueFormula:
         result = compute_business_impact(df)
         # 24 - 36 = -12 → clipped to 0 → 0.9 × 80 × 0 = 0
         assert result["expected_revenue_loss"].iloc[0] == 0.0, (
-            "Tenure > contract length should result in $0 revenue loss"
+            "Tenure > contract length should result in ₹0 revenue loss"
         )
 
     def test_exactly_at_contract_end(self):
@@ -130,7 +130,7 @@ class TestFallbackBehavior:
     def test_missing_monthly_charges_column_uses_fallback(self):
         """
         If 'MonthlyCharges' column is missing entirely, the function should
-        use FALLBACK_MONTHLY_CHARGES (e.g. $65.0) without raising an error.
+        use FALLBACK_MONTHLY_CHARGES (e.g. ₹65.0) without raising an error.
         """
         df = pd.DataFrame({
             "tenure":            [6],

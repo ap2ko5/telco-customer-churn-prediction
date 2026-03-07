@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import pandas as pd
 from retention_ai import generate_retention_recommendations
+from indian_currency import format_indian_currency
 
 
 def main():
@@ -48,7 +49,7 @@ def main():
     print(f"  Churn Probability: {test_data['churn_probability'].iloc[0]:.1%}")
     print(f"  Risk Band: {test_data['churn_band'].iloc[0]}")
     print(f"  Tenure: {test_data['tenure'].iloc[0]} months")
-    print(f"  Monthly Charges: ${test_data['MonthlyCharges'].iloc[0]:.2f}")
+    print(f"  Monthly Charges: {format_indian_currency(test_data['MonthlyCharges'].iloc[0])}")
     print(f"  Contract: {test_data['Contract'].iloc[0]}")
     print(f"  Internet: {test_data['InternetService'].iloc[0]}")
     print("\nGenerating AI recommendation from Gemini 2.5 Flash...\n")

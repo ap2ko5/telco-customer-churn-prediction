@@ -6,7 +6,7 @@ Compute expected revenue loss per customer and rank by financial risk.
 Formula:
   expected_revenue_loss = P(churn) × MonthlyCharges × max(0, CONTRACT_MONTHS − tenure)
 
-Interpretation: the expected dollar value the business will lose if this
+Interpretation: the expected rupee value the business will lose if this
 customer churns, assuming they would have remained for the rest of their
 typical contract period.
 """
@@ -23,6 +23,7 @@ from config import (
     MONTHLY_CHARGES_COL,
     TENURE_COL,
 )
+from indian_currency import format_indian_currency
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,6 @@ def compute_business_impact(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values("expected_revenue_loss", ascending=False)
 
     logger.info(
-        "Total expected revenue at risk: $%,.2f", df["expected_revenue_loss"].sum()
+        "Total expected revenue at risk: %s", format_indian_currency(df["expected_revenue_loss"].sum())
     )
     return df

@@ -79,15 +79,22 @@ python scripts/demo_ai_recommendations.py
 
 Requires `GEMINI_API_KEY` in `.env` file.
 
+## 8) Folder organization
+
+- Research and project guides are in `docs/`
+- Recommendation utilities are in `scripts/recommendations/`
+- Maintenance utilities are in `scripts/maintenance/`
+- Root-level utility files remain as compatibility wrappers
+
 ---
 
 ## 📚 Documentation
 
 - `README.md` - This quick start guide
-- `PROJECT_DOCUMENTATION.md` - Complete technical documentation
-- `PROJECT_STRUCTURE.md` - Module connections and architecture
-- `QUICK_REFERENCE.md` - Command reference and file locations
-- `STUDENT_GUIDE.md` - Educational walkthrough of the codebase
+- `docs/PROJECT_DOCUMENTATION.md` - Complete technical documentation
+- `docs/PROJECT_STRUCTURE.md` - Module connections and architecture
+- `docs/QUICK_REFERENCE.md` - Command reference and file locations
+- `docs/STUDENT_GUIDE.md` - Educational walkthrough of the codebase
 
 ## Notes
 

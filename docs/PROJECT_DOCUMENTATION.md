@@ -334,7 +334,7 @@ predict.py (Inference CLI)
 │      BUSINESS IMPACT     │  ← Produced by: business_impact.py
 ├──────────────────────────┤
 │ FK  customerID (index)   │
-│     expected_revenue_loss│  FLOAT (USD)
+│     expected_revenue_loss│  FLOAT (INR)
 │     estimated_remaining  │  INT (months = 24 - tenure)
 │     monthly_charges_used │  FLOAT
 └──────────┬───────────────┘
@@ -485,7 +485,7 @@ predict.py (Inference CLI)
 | ID | Requirement |
 |---|---|
 | FR-11.1 | The system SHALL compute: `expected_revenue_loss = churn_probability × MonthlyCharges × max(0, 24 − tenure)` |
-| FR-11.2 | If `MonthlyCharges` is missing, fallback value of $65.00/month SHALL be used |
+| FR-11.2 | If `MonthlyCharges` is missing, fallback value of ₹65.00/month SHALL be used |
 | FR-11.3 | If `tenure` is missing, fallback value of 12 months SHALL be used |
 | FR-11.4 | The result DataFrame SHALL be sorted by `expected_revenue_loss` descending |
 | FR-11.5 | The system SHALL print total expected revenue at risk |
@@ -508,7 +508,7 @@ predict.py (Inference CLI)
 | ID | Requirement |
 |---|---|
 | FR-13.1 | The system SHALL generate `outputs/churn_predictions.csv` with columns: `churn_probability`, `churn_band`, `expected_revenue_loss`, `retention_recommendation` (first), followed by all feature columns |
-| FR-13.2 | The system SHALL generate `outputs/summary_report.txt` containing: total customers, total revenue-at-risk ($), band distribution (% per band), top-50 high-risk customers by revenue loss |
+| FR-13.2 | The system SHALL generate `outputs/summary_report.txt` containing: total customers, total revenue-at-risk (₹), band distribution (% per band), top-50 high-risk customers by revenue loss |
 | FR-13.3 | The system SHALL generate `outputs/prob_distribution.png` — a histogram of churn probabilities with vertical band threshold markers |
 | FR-13.4 | The system SHALL generate `outputs/band_distribution.png` — a bar chart of customer counts per risk band |
 | FR-13.5 | The system SHALL generate `outputs/shap_importance.png` — XGBoost SHAP feature importance (TreeExplainer, top 20 features, sampled up to 500 rows) |

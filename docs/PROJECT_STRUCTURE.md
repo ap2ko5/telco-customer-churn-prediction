@@ -16,8 +16,16 @@ telco-customer-churn-prediction/
 │   ├── pyproject.toml              ← Project metadata
 │   ├── requirements.txt            ← Python dependencies
 │   ├── README.md                   ← Quick start guide
-│   ├── PROJECT_DOCUMENTATION.md    ← Full system documentation
-│   └── STUDENT_GUIDE.md            ← Educational walkthrough
+│   ├── generate_recommendations.py ← Compatibility wrapper
+│   ├── verify_connections.py       ← Compatibility wrapper
+│   └── test_indian_format.py       ← Compatibility wrapper
+│
+├── 📚 Documentation
+│   └── docs/
+│       ├── PROJECT_DOCUMENTATION.md
+│       ├── PROJECT_STRUCTURE.md
+│       ├── QUICK_REFERENCE.md
+│       └── STUDENT_GUIDE.md
 │
 ├── 📊 Data
 │   └── data/
@@ -50,7 +58,13 @@ telco-customer-churn-prediction/
 ├── 🔧 Scripts (Utilities & Demos)
 │   └── scripts/
 │       ├── __init__.py
-│       └── demo_ai_recommendations.py
+│       ├── demo_ai_recommendations.py
+│       ├── maintenance/
+│       │   ├── verify_connections.py
+│       │   └── test_indian_format.py
+│       └── recommendations/
+│           ├── generate_recommendations.py
+│           └── generate_recommendations_manual.py
 │
 ├── 🧪 Core Source Code
 │   └── src/

@@ -37,6 +37,9 @@ Customer Profile:
 Churn Probability: {churn_probability:.2%}
 Risk Band: {risk_band}
 
+Top Churn Drivers (model explainability):
+{top_drivers_json}
+
 Respond ONLY with a valid JSON object (no markdown, no code fences) with these exact keys:
 {{
   "likely_churn_reason": "...",
@@ -68,10 +71,22 @@ def _build_payload(row: pd.Series) -> dict:
                 profile[field] = value
                 break
 
+    raw_drivers = row.get("top_churn_drivers", "[]")
+    if isinstance(raw_drivers, str):
+        try:
+            parsed_drivers = json.loads(raw_drivers)
+        except json.JSONDecodeError:
+            parsed_drivers = []
+    elif isinstance(raw_drivers, list):
+        parsed_drivers = raw_drivers
+    else:
+        parsed_drivers = []
+
     return {
         "customer_profile": profile,
         "churn_probability": float(row.get("churn_probability", 0.0)),
         "risk_band": str(row.get("churn_band", "Unknown")),
+        "top_churn_drivers": parsed_drivers,
     }
 
 
@@ -188,6 +203,7 @@ def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
                 profile_json=json.dumps(payload["customer_profile"], indent=2),
                 churn_probability=payload["churn_probability"],
                 risk_band=payload["risk_band"],
+                top_drivers_json=json.dumps(payload["top_churn_drivers"], indent=2),
             )
 
             raw = _call_gemini(model, prompt)
