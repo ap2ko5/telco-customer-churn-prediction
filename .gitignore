@@ -3,37 +3,61 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
+*.so
+*.dll
 .Python
-*.egg-info/
-dist/
+
+# ── Build / packaging ─────────────────────────────────────────────────────────
 build/
+dist/
+site/
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
 
-# ── Environments ───────────────────────────────────────────────────────────────
-venv/
+# ── Virtual environments ──────────────────────────────────────────────────────
 .venv/
+venv/
 env/
-.env          # never commit real secrets
+ENV/
 
-# ── IDE ────────────────────────────────────────────────────────────────────────
+# ── Local environment files (never commit secrets) ───────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Tool caches ────────────────────────────────────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# ── Notebooks / local history ─────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── IDE / editor settings ─────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
+*.swo
 
-# ── Model artefacts (large binaries — use DVC or S3 for production) ────────────
-models/*.joblib
-models/pipeline_info.json
-models/churn_pipeline.joblib
+# ── OS-specific files ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
 
-# ── Generated outputs ──────────────────────────────────────────────────────────
-outputs/*.csv
-outputs/*.png
-outputs/*.txt
-
-# ── Logs ───────────────────────────────────────────────────────────────────────
+# ── Project generated artefacts ───────────────────────────────────────────────
+outputs/
 logs/
-
-# ── Streamlit temp upload ──────────────────────────────────────────────────────
 _tmp_upload.csv
 
-# ── Test cache ─────────────────────────────────────────────────────────────────
-.pytest_cache/
+# ── Model artefacts (large binaries) ──────────────────────────────────────────
+models/*.joblib
+
+# Keep these tracked metadata files in git
+!models/model_info.json
+!models/pipeline_info.json

@@ -55,6 +55,23 @@ streamlit run app.py
 
 Upload any customer CSV in the sidebar to run live predictions.
 
+### Power BI integration in Streamlit
+
+The dashboard now includes an embedded Power BI section for executive views.
+
+You can configure it directly in the sidebar or through environment variables:
+
+```powershell
+$env:PBI_EMBED_URL="https://..."
+$env:PBI_ACCESS_TOKEN="..."   # only needed for secure mode
+$env:PBI_REPORT_ID="..."      # optional in secure mode
+```
+
+Embed modes:
+
+- `public`: Use a publish-to-web link (iframe)
+- `secure`: Use access token + Power BI JavaScript SDK
+
 ## 5) Predict for a single customer (CLI)
 
 ```powershell

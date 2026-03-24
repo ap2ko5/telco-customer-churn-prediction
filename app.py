@@ -17,12 +17,14 @@ Features:
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 # ── page config (must be FIRST Streamlit call) ───────────────────────────────
 st.set_page_config(
@@ -207,6 +209,74 @@ def format_indian_rupees(val: float) -> str:
     return f"₹{formatted_int}{decimal_part:.2f}"[:-3] if decimal_part == 0 else f"₹{formatted_int}.{int(decimal_part * 100):02d}"
 
 
+def _is_http_url(value: str) -> bool:
+        """Basic URL check for Power BI embed links."""
+        return value.startswith("http://") or value.startswith("https://")
+
+
+def render_powerbi_embed(
+        embed_url: str,
+        embed_mode: str,
+        access_token: str,
+        report_id: str,
+        height_px: int,
+) -> None:
+        """
+        Render Power BI report in Streamlit.
+
+        - public mode: iframe (publish-to-web links)
+        - secure mode: powerbi-client with Azure AD embed token
+        """
+        if not embed_url:
+                st.info("Add a Power BI embed URL in the sidebar to display a live report.")
+                return
+
+        if not _is_http_url(embed_url):
+                st.error("Power BI embed URL must start with http:// or https://")
+                return
+
+        if embed_mode == "public":
+                components.iframe(embed_url, height=height_px, scrolling=True)
+                return
+
+        if not access_token:
+                st.warning("Secure embed mode requires an access token. Add one in the sidebar or set PBI_ACCESS_TOKEN.")
+                return
+
+        safe_embed_url = json.dumps(embed_url)
+        safe_access_token = json.dumps(access_token)
+        safe_report_id = json.dumps(report_id.strip()) if report_id else '""'
+
+        html = f"""
+        <div id=\"pbi-report-container\" style=\"width: 100%; height: {height_px}px; border-radius: 12px; overflow: hidden;\"></div>
+        <script src=\"https://cdn.jsdelivr.net/npm/powerbi-client@2.23.1/dist/powerbi.js\"></script>
+        <script>
+            const models = window['powerbi-client'].models;
+            const config = {{
+                type: 'report',
+                tokenType: models.TokenType.Embed,
+                accessToken: {safe_access_token},
+                embedUrl: {safe_embed_url},
+                id: {safe_report_id},
+                permissions: models.Permissions.All,
+                settings: {{
+                    panes: {{
+                        filters: {{ visible: false }},
+                        pageNavigation: {{ visible: true }}
+                    }},
+                    background: models.BackgroundType.Transparent
+                }}
+            }};
+
+            const container = document.getElementById('pbi-report-container');
+            const powerbi = window.powerbi;
+            powerbi.reset(container);
+            powerbi.embed(container, config);
+        </script>
+        """
+        components.html(html, height=height_px + 10, scrolling=False)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Sidebar
 # ─────────────────────────────────────────────────────────────────────────────
@@ -225,6 +295,35 @@ with st.sidebar:
         options=["Low", "Medium", "High", "Critical"],
         default=["Low", "Medium", "High", "Critical"],
     )
+    st.markdown("---")
+    st.markdown("### 📊 Power BI Integration")
+    default_pbi_url = os.getenv("PBI_EMBED_URL", "")
+    default_pbi_token = os.getenv("PBI_ACCESS_TOKEN", "")
+    default_report_id = os.getenv("PBI_REPORT_ID", "")
+
+    powerbi_embed_url = st.text_input(
+        "Power BI Embed URL",
+        value=default_pbi_url,
+        help="Use either a Publish-to-web URL (public mode) or report embed URL (secure mode).",
+    )
+    powerbi_embed_mode = st.selectbox(
+        "Embed Mode",
+        options=["public", "secure"],
+        index=0,
+        help="Public uses iframe. Secure uses access token + Power BI JavaScript SDK.",
+    )
+    powerbi_report_id = st.text_input(
+        "Report ID (optional)",
+        value=default_report_id,
+        help="Used for secure embedding. Leave empty if embedUrl already includes report context.",
+    )
+    powerbi_access_token = st.text_input(
+        "Access Token (secure mode)",
+        value=default_pbi_token,
+        type="password",
+    )
+    powerbi_height = st.slider("Embed Height", min_value=420, max_value=1200, value=700, step=20)
+
     st.markdown("---")
     st.markdown("### ℹ About")
     st.caption(
@@ -251,6 +350,17 @@ with st.sidebar:
 
 st.title("Stacked Churn Intelligence Dashboard")
 st.caption("XGBoost + Neural Network Stacking Ensemble · AI-augmented retention analytics")
+
+st.markdown("### Executive Power BI View")
+st.caption("Embed your business dashboard to combine executive BI tracking with churn model outputs in one app.")
+render_powerbi_embed(
+    embed_url=powerbi_embed_url.strip(),
+    embed_mode=powerbi_embed_mode,
+    access_token=powerbi_access_token.strip(),
+    report_id=powerbi_report_id.strip(),
+    height_px=powerbi_height,
+)
+st.markdown("---")
 
 # ── Check if models are available ─────────────────────────────────────────────
 models_ready = (MODELS_DIR / "preprocessing_pipeline.joblib").exists()
