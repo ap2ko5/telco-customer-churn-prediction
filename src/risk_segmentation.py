@@ -38,22 +38,22 @@ def assign_risk_band(churn_probs: np.ndarray) -> np.ndarray:
             Values are one of: "Low", "Medium", "High", "Critical"
     """
     probs = np.asarray(churn_probs, dtype=np.float64)
-    bands = np.empty(len(probs), dtype=object)
 
+    conditions = []
+    choices = []
     for band_name, (lo, hi) in _BANDS_SORTED:
-        bands[(probs >= lo) & (probs < hi)] = band_name
+        conditions.append((probs >= lo) & (probs < hi))
+        choices.append(band_name)
 
-    # Edge case: exactly 1.0 falls outside all half-open intervals
-    bands[probs >= 1.0] = "Critical"
+    bands = np.select(conditions, choices, default="Critical").astype(object)
 
-    # Safety: fill any remaining None (shouldn't happen with valid inputs)
-    none_mask = bands == None  # noqa: E711
-    if none_mask.any():
+    # Defensive logging for out-of-range values (outside [0, 1]).
+    invalid_mask = (probs < 0.0) | (probs > 1.0)
+    if invalid_mask.any():
         logger.warning(
-            "assign_risk_band: %d values did not match any band. Defaulting to 'Critical'.",
-            none_mask.sum(),
+            "assign_risk_band: %d out-of-range probabilities detected; assigned 'Critical'.",
+            int(invalid_mask.sum()),
         )
-        bands[none_mask] = "Critical"
 
     return bands
 

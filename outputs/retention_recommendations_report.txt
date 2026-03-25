@@ -1,0 +1,203 @@
+================================================================================
+  AI RETENTION RECOMMENDATIONS - SUMMARY REPORT
+================================================================================
+
+Generated: 2026-03-23 23:08:46
+Total high-risk customers: 1,174
+Total revenue at risk: ₹11,02,062.23
+
+================================================================================
+TOP 10 CRITICAL CUSTOMERS WITH RETENTION STRATEGIES
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #1
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,333.35
+Tenure               : 1 months
+Monthly Charges      : ₹101.45
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Electronic check
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (101.45), electronic-check billing, no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #2
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,318.40
+Tenure               : 1 months
+Monthly Charges      : ₹100.80
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Electronic check
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (100.80), electronic-check billing, no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #3
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,305.75
+Tenure               : 1 months
+Monthly Charges      : ₹100.25
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Credit card (automatic)
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (100.25), no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #4
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,294.25
+Tenure               : 1 months
+Monthly Charges      : ₹99.75
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Electronic check
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (99.75), electronic-check billing, no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #5
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,195.35
+Tenure               : 1 months
+Monthly Charges      : ₹95.45
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Electronic check
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (95.45), electronic-check billing, no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #6
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,187.30
+Tenure               : 1 months
+Monthly Charges      : ₹95.10
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Electronic check
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (95.10), electronic-check billing, no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #7
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,175.80
+Tenure               : 1 months
+Monthly Charges      : ₹94.60
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Electronic check
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (94.60), electronic-check billing, no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #8
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,162.00
+Tenure               : 1 months
+Monthly Charges      : ₹94.00
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Electronic check
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (94.00), electronic-check billing, no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #9
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,158.55
+Tenure               : 1 months
+Monthly Charges      : ₹93.85
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Electronic check
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (93.85), electronic-check billing, no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+────────────────────────────────────────────────────────────────────────────────
+Customer #10
+────────────────────────────────────────────────────────────────────────────────
+Churn Probability    : 100.0%
+Risk Band            : Critical
+Expected Revenue Loss: ₹2,151.65
+Tenure               : 1 months
+Monthly Charges      : ₹93.55
+Contract             : Month-to-month
+Internet Service     : Fiber optic
+Payment Method       : Electronic check
+
+🤖 AI RETENTION STRATEGY:
+   Likely Churn Reason : Customer is very new and may not have seen sustained value yet.
+   Risk Summary        : Critical risk at 100.0%; key factors: short tenure (1 months), month-to-month contract, high monthly charges (93.55), electronic-check billing, no support/security add-ons.
+   Retention Action    : Initiate outreach within 24 hours, run onboarding review, and assign priority support for 60-90 days.
+   Offer Recommendation: Provide a temporary bill credit and 2-3 months of premium add-ons at no extra cost.
+   Communication Tone  : Urgent and empathetic
+
+================================================================================

@@ -18,7 +18,6 @@ Optional:
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -29,7 +28,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from config import MODELS_DIR, RISK_BANDS, MONTHLY_CHARGES_COL, TENURE_COL, ESTIMATED_CONTRACT_MONTHS
+from config import MODELS_DIR as DEFAULT_MODELS_DIR, RISK_BANDS, MONTHLY_CHARGES_COL, TENURE_COL, ESTIMATED_CONTRACT_MONTHS
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -99,7 +98,7 @@ def estimate_revenue_loss(row: dict, prob: float) -> float:
     return round(prob * monthly * remaining, 2)
 
 
-def find_latest_artifact(prefix: str) -> Path:
+def find_latest_artifact(prefix: str, models_dir: Path) -> Path:
     """
     Find the most recently saved model artifact by prefix.
     Falls back to the plain name (e.g. xgb_model.joblib) if no versioned file found.
@@ -112,14 +111,14 @@ def find_latest_artifact(prefix: str) -> Path:
     -------
     Path to the latest matching .joblib file.
     """
-    matches = sorted(MODELS_DIR.glob(f"{prefix}_*.joblib"))
+    matches = sorted(models_dir.glob(f"{prefix}_*.joblib"))
     if matches:
         return matches[-1]          # Last alphabetically = latest by timestamp
-    fallback = MODELS_DIR / f"{prefix}.joblib"
+    fallback = models_dir / f"{prefix}.joblib"
     if fallback.exists():
         return fallback
     raise FileNotFoundError(
-        f"No model artifact found for prefix '{prefix}' in {MODELS_DIR}.\n"
+        f"No model artifact found for prefix '{prefix}' in {models_dir}.\n"
         "Run train_pipeline.py first to generate model files."
     )
 
@@ -128,7 +127,7 @@ def find_latest_artifact(prefix: str) -> Path:
 # Load artifacts
 # ─────────────────────────────────────────────────────────────────────────────
 
-def load_artifacts(run_id: str | None = None) -> tuple:
+def load_artifacts(run_id: str | None = None, models_dir: Path = DEFAULT_MODELS_DIR) -> tuple:
     """
     Load all four artifacts needed for stacked inference.
 
@@ -145,7 +144,7 @@ def load_artifacts(run_id: str | None = None) -> tuple:
     print("[predict_stacked] Loading artifacts...")
 
     # Preprocessing pipeline is always the same file (not versioned)
-    preproc_path = MODELS_DIR / "preprocessing_pipeline.joblib"
+    preproc_path = models_dir / "preprocessing_pipeline.joblib"
     if not preproc_path.exists():
         raise FileNotFoundError(
             f"Preprocessing pipeline not found at {preproc_path}.\n"
@@ -155,16 +154,16 @@ def load_artifacts(run_id: str | None = None) -> tuple:
     print(f"  Preprocessor  : {preproc_path}")
 
     if run_id:
-        xgb_path  = MODELS_DIR / f"xgb_model_{run_id}.joblib"
-        nn_path   = MODELS_DIR / f"nn_model_{run_id}.joblib"
-        meta_path = MODELS_DIR / f"meta_model_{run_id}.joblib"
+        xgb_path  = models_dir / f"xgb_model_{run_id}.joblib"
+        nn_path   = models_dir / f"nn_model_{run_id}.joblib"
+        meta_path = models_dir / f"meta_model_{run_id}.joblib"
         for p in [xgb_path, nn_path, meta_path]:
             if not p.exists():
                 raise FileNotFoundError(f"Artifact not found: {p}")
     else:
-        xgb_path  = find_latest_artifact("xgb_model")
-        nn_path   = find_latest_artifact("nn_model")
-        meta_path = find_latest_artifact("meta_model")
+        xgb_path  = find_latest_artifact("xgb_model", models_dir)
+        nn_path   = find_latest_artifact("nn_model", models_dir)
+        meta_path = find_latest_artifact("meta_model", models_dir)
 
     xgb_model  = joblib.load(xgb_path)
     nn_model   = joblib.load(nn_path)
@@ -262,9 +261,14 @@ def main() -> None:
         print(f"[ERROR] {e}")
         sys.exit(1)
 
+    models_dir = Path(args.models_dir).expanduser().resolve() if args.models_dir else DEFAULT_MODELS_DIR
+
     # Load all 4 model artifacts
     try:
-        preprocessor, xgb_model, nn_model, meta_model = load_artifacts(run_id=args.run_id)
+        preprocessor, xgb_model, nn_model, meta_model = load_artifacts(
+            run_id=args.run_id,
+            models_dir=models_dir,
+        )
     except FileNotFoundError as e:
         print(f"[ERROR] {e}")
         sys.exit(1)

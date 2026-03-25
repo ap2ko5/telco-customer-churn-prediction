@@ -53,34 +53,22 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) with these e
 
 def _build_payload(row: pd.Series) -> dict:
     """Build the customer profile dict from a DataFrame row."""
-    profile_fields = [
-        "tenure", "MonthlyCharges", "TotalCharges",
-        "Contract", "InternetService", "PaymentMethod",
-        "TechSupport", "OnlineSecurity", "StreamingTV",
-        "StreamingMovies", "MultipleLines", "SeniorCitizen",
-    ]
     profile = {}
-    for field in profile_fields:
-        # Flexible column match (case-insensitive alternatives)
-        for col in row.index:
-            if col.lower().replace("_", "") == field.lower().replace("_", ""):
-                value = row[col]
-                # Convert numpy/pandas types to native Python types for JSON serialization
-                if hasattr(value, 'item'):
-                    value = value.item()
-                profile[field] = value
-                break
 
-    raw_drivers = row.get("top_churn_drivers", "[]")
-    if isinstance(raw_drivers, str):
-        try:
-            parsed_drivers = json.loads(raw_drivers)
-        except json.JSONDecodeError:
-            parsed_drivers = []
-    elif isinstance(raw_drivers, list):
-        parsed_drivers = raw_drivers
-    else:
-        parsed_drivers = []
+    # Precompute normalized lookup once to avoid scanning all columns per field.
+    col_lookup = {_normalize_key(str(col)): col for col in row.index}
+    for field in _PROFILE_FIELDS:
+        col = col_lookup.get(_normalize_key(field))
+        if col is None:
+            continue
+
+        value = row[col]
+        # Convert numpy/pandas scalar types to Python-native values.
+        if hasattr(value, "item"):
+            value = value.item()
+        profile[field] = value
+
+    parsed_drivers = _parse_top_churn_drivers(row.get("top_churn_drivers", "[]"))
 
     return {
         "customer_profile": profile,
@@ -127,6 +115,44 @@ _REQUIRED_KEYS = {
     "offer_recommendation",
     "communication_tone",
 }
+
+_PROFILE_FIELDS = (
+    "tenure",
+    "MonthlyCharges",
+    "TotalCharges",
+    "Contract",
+    "InternetService",
+    "PaymentMethod",
+    "TechSupport",
+    "OnlineSecurity",
+    "StreamingTV",
+    "StreamingMovies",
+    "MultipleLines",
+    "SeniorCitizen",
+)
+
+_HIGH_RISK_BANDS = ("High", "Critical")
+_DEFAULT_RETENTION_MESSAGE = "Standard retention — low/medium risk customer."
+
+
+def _normalize_key(name: str) -> str:
+    """Normalize column names for forgiving field matching."""
+    return name.lower().replace("_", "")
+
+
+def _parse_top_churn_drivers(raw_drivers) -> list:
+    """Parse serialized or native top churn drivers into a list."""
+    if isinstance(raw_drivers, str):
+        try:
+            parsed_drivers = json.loads(raw_drivers)
+        except json.JSONDecodeError:
+            parsed_drivers = []
+    elif isinstance(raw_drivers, list):
+        parsed_drivers = raw_drivers
+    else:
+        parsed_drivers = []
+
+    return parsed_drivers
 
 
 def _generate_fallback_recommendation(payload: dict) -> str:
@@ -289,6 +315,14 @@ def _extract_text_from_gemini_response(response) -> str:
     raise ValueError("Gemini returned an empty/blocked response without text parts.")
 
 
+def _apply_fallback_recommendations(df: pd.DataFrame, indices: list[int]) -> pd.DataFrame:
+    """Populate fallback recommendations for the provided row indices."""
+    for idx in indices:
+        payload = _build_payload(df.loc[idx])
+        df.at[idx, "retention_recommendation"] = _generate_fallback_recommendation(payload)
+    return df
+
+
 def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add 'retention_recommendation' column to df.
@@ -297,10 +331,11 @@ def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
     All others receive a default message.
     """
     df = df.copy()
-    df["retention_recommendation"] = "Standard retention — low/medium risk customer."
+    df["retention_recommendation"] = _DEFAULT_RETENTION_MESSAGE
 
     api_key = os.getenv("GEMINI_API_KEY", "")
-    high_risk_mask = df["churn_band"].isin(["High", "Critical"])
+    high_risk_mask = df["churn_band"].isin(_HIGH_RISK_BANDS)
+    high_risk_indices = df[high_risk_mask].index.tolist()
 
     if not api_key or api_key == "your_gemini_api_key_here":
         print(
@@ -308,10 +343,7 @@ def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
             "Using fallback recommendations for High/Critical risk customers. "
             "Set GEMINI_API_KEY in .env to enable Gemini-generated recommendations."
         )
-        for idx in df[high_risk_mask].index:
-            payload = _build_payload(df.loc[idx])
-            df.at[idx, "retention_recommendation"] = _generate_fallback_recommendation(payload)
-        return df
+        return _apply_fallback_recommendations(df, high_risk_indices)
 
     try:
         import google.generativeai as genai
@@ -322,14 +354,10 @@ def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
             "[retention_ai] google-generativeai not installed. "
             "Using fallback recommendations for High/Critical customers."
         )
-        for idx in df[high_risk_mask].index:
-            payload = _build_payload(df.loc[idx])
-            df.at[idx, "retention_recommendation"] = _generate_fallback_recommendation(payload)
-        return df
+        return _apply_fallback_recommendations(df, high_risk_indices)
 
     # Filter High + Critical customers
-    high_risk_df = df[high_risk_mask]
-    n_customers = len(high_risk_df)
+    n_customers = len(high_risk_indices)
 
     if n_customers == 0:
         print("[retention_ai] No High/Critical risk customers found.")
@@ -337,13 +365,12 @@ def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
 
     print(f"[retention_ai] Generating recommendations for {n_customers} high-risk customers...")
 
-    indices  = high_risk_df.index.tolist()
-    results  = {}
+    results = {}
 
     # Process in batches
     gemini_enabled = True
     for batch_start in tqdm(range(0, n_customers, GEMINI_BATCH_SIZE), desc="Gemini batches"):
-        batch_indices = indices[batch_start : batch_start + GEMINI_BATCH_SIZE]
+        batch_indices = high_risk_indices[batch_start : batch_start + GEMINI_BATCH_SIZE]
 
         for idx in batch_indices:
             row = df.loc[idx]
@@ -371,7 +398,8 @@ def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
                 results[idx] = _generate_fallback_recommendation(payload)
 
         # Rate-limit buffer between batches
-        time.sleep(GEMINI_RATE_LIMIT_SLEEP)
+        if batch_start + GEMINI_BATCH_SIZE < n_customers:
+            time.sleep(GEMINI_RATE_LIMIT_SLEEP)
 
     for idx, rec in results.items():
         df.at[idx, "retention_recommendation"] = rec

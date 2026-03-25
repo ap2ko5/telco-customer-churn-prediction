@@ -36,8 +36,7 @@ htmlcov/
 .tox/
 .nox/
 
-# ── Notebooks / local history ─────────────────────────────────────────────────
-.ipynb_checkpoints/
+# ── Notebooks / local history ───────────────────────────────────────────────
 
 # ── IDE / editor settings ─────────────────────────────────────────────────────
 .vscode/
@@ -50,14 +49,3 @@ htmlcov/
 Thumbs.db
 desktop.ini
 
-# ── Project generated artefacts ───────────────────────────────────────────────
-outputs/
-logs/
-_tmp_upload.csv
-
-# ── Model artefacts (large binaries) ──────────────────────────────────────────
-models/*.joblib
-
-# Keep these tracked metadata files in git
-!models/model_info.json
-!models/pipeline_info.json
