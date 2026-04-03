@@ -1,0 +1,21 @@
+{
+  "tenure": 60,
+  "MonthlyCharges": 110.5,
+  "TotalCharges": 6630.0,
+  "Contract": "Two year",
+  "InternetService": "Fiber optic",
+  "TechSupport": "Yes",
+  "OnlineSecurity": "Yes",
+  "OnlineBackup": "Yes",
+  "DeviceProtection": "Yes",
+  "StreamingTV": "Yes",
+  "StreamingMovies": "Yes",
+  "MultipleLines": "Yes",
+  "PhoneService": "Yes",
+  "SeniorCitizen": 0,
+  "Partner": "Yes",
+  "Dependents": "Yes",
+  "PaperlessBilling": "No",
+  "PaymentMethod": "Credit card (automatic)",
+  "gender": "Female"
+}

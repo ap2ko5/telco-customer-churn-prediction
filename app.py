@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -34,26 +33,24 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Make src/ importable ──────────────────────────────────────────────────────
 PROJECT_ROOT = Path(__file__).parent
-sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 import joblib
 
-from config import (
+from src.config import (
     ESTIMATED_CONTRACT_MONTHS,
     FALLBACK_MONTHLY_CHARGES,
     MODELS_DIR,
     OUTPUTS_DIR,
     RISK_BANDS,
 )
-from data_loader import load_data
-from preprocessor import transform as preprocess_transform
-from xgb_model import predict_proba_xgb
-from nn_model import predict_proba_nn
-from stacking import stack_predict
-from risk_segmentation import add_risk_band
-from business_impact import compute_business_impact
+from src.data_loader import load_data
+from src.preprocessor import transform as preprocess_transform
+from src.xgb_model import predict_proba_xgb
+from src.nn_model import predict_proba_nn
+from src.stacking import stack_predict
+from src.risk_segmentation import add_risk_band
+from src.business_impact import compute_business_impact
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -459,7 +456,7 @@ with tab_overview:
     band_df = pd.DataFrame({
         "Band":  band_counts.index,
         "Count": band_counts.values,
-        "Pct":   (band_counts.values / total * 100).round(1),
+        "Pct":   ((band_counts.to_numpy(dtype=float) / max(total, 1)) * 100).round(1),
     })
     for _, row in band_df.iterrows():
         color = BAND_COLORS.get(row["Band"], "#ccc")

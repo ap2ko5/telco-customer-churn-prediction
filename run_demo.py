@@ -33,6 +33,8 @@ import sys
 import time
 from pathlib import Path
 
+import pandas as pd
+
 # ── Configure logging early ───────────────────────────────────────────────────
 logging.basicConfig(
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
@@ -46,17 +48,47 @@ PROJECT_ROOT = Path(__file__).parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 # Now safe to import from src/
-from src.safe_csv_writer import enforce_powerbi_schema, safe_write_csv
+from src.safe_csv_writer import POWERBI_STABLE_COLUMNS, enforce_powerbi_schema, safe_write_csv
 from src.indian_currency import format_indian_currency
 
 
-POWERBI_REQUIRED_COLUMNS = [
-    "churn_probability",
-    "churn_band",
-    "expected_revenue_loss",
-    "expected_revenue_loss_rupees",
-    "retention_recommendation",
-]
+POWERBI_REQUIRED_COLUMNS = POWERBI_STABLE_COLUMNS
+
+
+def _normalize_recommendation_text(value: object) -> str:
+    """Convert recommendation payloads to BI-safe plain text."""
+    text = "" if value is None else str(value).strip()
+    if not text:
+        return ""
+
+    if text.startswith("{") and text.endswith("}"):
+        try:
+            data = json.loads(text)
+            reason = str(data.get("likely_churn_reason", "")).strip()
+            action = str(data.get("retention_action", "")).strip()
+            offer = str(data.get("offer_recommendation", "")).strip()
+            tone = str(data.get("communication_tone", "")).strip()
+            parts = [
+                f"Reason: {reason}" if reason else "",
+                f"Action: {action}" if action else "",
+                f"Offer: {offer}" if offer else "",
+                f"Tone: {tone}" if tone else "",
+            ]
+            return " | ".join(p for p in parts if p)
+        except Exception:
+            return text
+
+    return text
+
+
+def _read_existing_output_csv(output_csv_path: Path) -> "pd.DataFrame":
+    """Read an existing output CSV defensively, tolerating delimiter auto-detection."""
+    import pandas as pd
+
+    try:
+        return pd.read_csv(output_csv_path, sep=None, engine="python")
+    except Exception:
+        return pd.read_csv(output_csv_path)
 
 # Dynamic imports from the main pipeline to avoid issues
 def main() -> int:
@@ -68,6 +100,8 @@ def main() -> int:
     int
         Exit code: 0 if successful, 1 if error
     """
+    import numpy as np
+
     from src.business_impact import compute_business_impact
     from src.config import (
         MODELS_DIR,
@@ -95,6 +129,16 @@ def main() -> int:
     )
     parser.add_argument(
         "--skip-ai", action="store_true", help="Skip AI retention recommendations (faster)"
+    )
+    parser.add_argument(
+        "--mock-ai",
+        action="store_true",
+        help="Imitate Gemini response format locally and fill recommendations for all rows.",
+    )
+    parser.add_argument(
+        "--append-output",
+        action="store_true",
+        help="Append new predictions to existing output CSV instead of replacing it.",
     )
     args = parser.parse_args()
 
@@ -140,6 +184,7 @@ def main() -> int:
         print("🚨 Step 5: Risk Band Segmentation")
         result_df = X.copy().reset_index(drop=True)
         result_df["churn_probability"] = final_probs
+        result_df["predicted_status"] = np.where(result_df["churn_probability"] >= 0.5, "Churned", "Unchurned")
         result_df = add_risk_band(result_df)
         print(f"   ✓ Risk bands assigned\n")
 
@@ -175,7 +220,15 @@ def main() -> int:
         print(f"   ✓ Top drivers identified per customer\n")
 
         # ── Step 8: AI Retention Recommendations ──────────────────────────────
-        if not args.skip_ai:
+        if args.mock_ai:
+            print("🤖 Step 8: Mock Gemini Recommendations (local structured output)")
+            result_df = generate_retention_recommendations(
+                result_df,
+                include_all_bands=True,
+                force_fallback=True,
+            )
+            print(f"   ✓ Mock Gemini-style recommendations generated for all customers\n")
+        elif not args.skip_ai:
             print("🤖 Step 8: AI Retention Recommendations (Gemini)")
             result_df = generate_retention_recommendations(result_df)
             print(f"   ✓ Retention strategies generated\n")
@@ -200,6 +253,12 @@ def main() -> int:
         # Add formatted currency columns for Power BI
         result_df_for_export = add_rupee_formatted_columns(result_df)
 
+        # Keep recommendations as readable plain text for stable BI ingestion.
+        if "retention_recommendation" in result_df_for_export.columns:
+            result_df_for_export["retention_recommendation"] = (
+                result_df_for_export["retention_recommendation"].apply(_normalize_recommendation_text)
+            )
+
         # Use a fixed path (or override via env var) so Power BI source stays constant.
         csv_override = os.getenv("POWERBI_CSV_PATH", "").strip()
         output_csv_path = Path(csv_override) if csv_override else PREDICTIONS_CSV
@@ -208,10 +267,26 @@ def main() -> int:
         result_df_for_export = enforce_powerbi_schema(
             result_df_for_export,
             POWERBI_REQUIRED_COLUMNS,
-            keep_extra_columns=True,
+            keep_extra_columns=False,
         )
 
         col_order = result_df_for_export.columns.tolist()
+
+        rows_before = 0
+        rows_new = len(result_df_for_export)
+
+        if args.append_output and output_csv_path.exists():
+            existing_df = _read_existing_output_csv(output_csv_path)
+            existing_df = enforce_powerbi_schema(
+                existing_df,
+                POWERBI_REQUIRED_COLUMNS,
+                keep_extra_columns=False,
+            )
+            rows_before = len(existing_df)
+            result_df_for_export = pd.concat(
+                [existing_df[col_order], result_df_for_export[col_order]],
+                ignore_index=True,
+            )
 
         safe_write_csv(
             result_df_for_export[col_order],
@@ -219,6 +294,11 @@ def main() -> int:
             columns_order=col_order,
             verbose=True,
         )
+
+        if args.append_output:
+            print(
+                f"   ✓ Append mode: existing rows={rows_before:,}, added rows={rows_new:,}, total rows={len(result_df_for_export):,}"
+            )
         print()
 
         # Calculate metrics for final report

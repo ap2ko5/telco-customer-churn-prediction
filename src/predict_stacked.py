@@ -18,6 +18,7 @@ Optional:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -29,6 +30,11 @@ import numpy as np
 import pandas as pd
 
 from config import MODELS_DIR as DEFAULT_MODELS_DIR, RISK_BANDS, MONTHLY_CHARGES_COL, TENURE_COL, ESTIMATED_CONTRACT_MONTHS
+from indian_currency import format_indian_currency
+from safe_csv_writer import DEFAULT_CSV_DELIMITER, POWERBI_STABLE_COLUMNS, enforce_powerbi_schema, safe_write_csv
+
+DEFAULT_OUTPUT_CSV = Path(__file__).resolve().parent.parent / "outputs" / "one_customer_prediction.csv"
+POWERBI_REQUIRED_COLUMNS = POWERBI_STABLE_COLUMNS
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,6 +82,83 @@ def parse_kv_pairs(pairs: list[str]) -> dict:
                 data[key] = value
 
     return data
+
+
+def load_customer_from_json(input_file: Path) -> dict:
+    """Load one-customer payload from a JSON file."""
+    if not input_file.exists():
+        raise FileNotFoundError(f"Input file not found: {input_file}")
+
+    with input_file.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+
+    if not isinstance(payload, dict):
+        raise ValueError("Input JSON must be a single object of key/value pairs.")
+
+    return payload
+
+
+def get_required_feature_columns(models_dir: Path) -> list[str]:
+    """Read expected raw feature columns from pipeline_info.json if available."""
+    info_path = models_dir / "pipeline_info.json"
+    if not info_path.exists():
+        return []
+
+    try:
+        info = json.loads(info_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return []
+
+    cols = info.get("feature_columns")
+    return cols if isinstance(cols, list) else []
+
+
+def validate_customer_fields(customer: dict, required_cols: list[str]) -> None:
+    """Validate required feature fields and raise readable error for missing keys."""
+    if not required_cols:
+        return
+
+    missing = [c for c in required_cols if c not in customer]
+    if missing:
+        raise ValueError(
+            "Missing required customer fields: "
+            + ", ".join(missing)
+            + "\nTip: create a JSON file with all required fields from models/pipeline_info.json -> feature_columns."
+        )
+
+
+def build_single_customer_export_row(customer: dict, result: dict) -> pd.DataFrame:
+    """Build a one-row DataFrame matching Power BI-friendly schema conventions."""
+    row = dict(customer)
+    row.update(result)
+    row["churn_band"] = result.get("risk_band", "")
+    row["retention_recommendation"] = "Manual single-customer test run."
+    row["top_churn_drivers"] = "[]"
+
+    # Add rupee-formatted display helpers used by dashboards.
+    row["expected_revenue_loss_rupees"] = format_indian_currency(float(result["expected_revenue_loss"]))
+    if "MonthlyCharges" in row:
+        row["monthly_charges_rupees"] = format_indian_currency(float(row["MonthlyCharges"]))
+    if "TotalCharges" in row:
+        row["total_charges_rupees"] = format_indian_currency(float(row["TotalCharges"]))
+
+    df = pd.DataFrame([row])
+    return enforce_powerbi_schema(df, POWERBI_REQUIRED_COLUMNS, keep_extra_columns=False)
+
+
+def append_or_create_prediction_csv(output_csv: Path, new_row_df: pd.DataFrame) -> pd.DataFrame:
+    """Append new prediction row to existing CSV, or create a new file if it doesn't exist."""
+    if output_csv.exists():
+        existing_df = pd.read_csv(output_csv, sep=None, engine="python")
+
+        # Preserve old columns and include any new columns deterministically.
+        all_cols = list(dict.fromkeys(existing_df.columns.tolist() + new_row_df.columns.tolist()))
+        existing_df = existing_df.reindex(columns=all_cols)
+        new_row_df = new_row_df.reindex(columns=all_cols)
+
+        return pd.concat([existing_df, new_row_df], ignore_index=True)
+
+    return new_row_df
 
 
 def assign_risk_band(prob: float) -> str:
@@ -239,9 +322,13 @@ def main() -> None:
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument(
-        "--input", nargs="+", required=True,
+        "--input", nargs="+", required=False,
         help="Customer features as key=value pairs.\n"
              "Example: --input tenure=12 MonthlyCharges=85.0 Contract=Month-to-month",
+    )
+    parser.add_argument(
+        "--input-file", default=None,
+        help="Path to one-customer JSON file (cleaner than long --input commands).",
     )
     parser.add_argument(
         "--run-id", default=None,
@@ -252,16 +339,42 @@ def main() -> None:
         "--models-dir", default=None,
         help="Override the models directory path.",
     )
+    parser.add_argument(
+        "--write-csv",
+        nargs="?",
+        const=str(DEFAULT_OUTPUT_CSV),
+        default=None,
+        help="Optionally append this one-customer result to a CSV file (default: outputs/one_customer_prediction.csv).",
+    )
     args = parser.parse_args()
+
+    if not args.input and not args.input_file:
+        print("[ERROR] Provide either --input key=value ... OR --input-file path/to/customer.json")
+        sys.exit(1)
+
+    if args.input and args.input_file:
+        print("[ERROR] Use only one input mode: --input or --input-file")
+        sys.exit(1)
 
     # Parse customer features
     try:
-        customer = parse_kv_pairs(args.input)
-    except ValueError as e:
+        if args.input_file:
+            customer = load_customer_from_json(Path(args.input_file).expanduser().resolve())
+        else:
+            customer = parse_kv_pairs(args.input)
+    except (ValueError, FileNotFoundError, json.JSONDecodeError) as e:
         print(f"[ERROR] {e}")
         sys.exit(1)
 
     models_dir = Path(args.models_dir).expanduser().resolve() if args.models_dir else DEFAULT_MODELS_DIR
+
+    # Validate keys early for friendlier error messages.
+    try:
+        required_cols = get_required_feature_columns(models_dir)
+        validate_customer_fields(customer, required_cols)
+    except ValueError as e:
+        print(f"[ERROR] {e}")
+        sys.exit(1)
 
     # Load all 4 model artifacts
     try:
@@ -283,7 +396,6 @@ def main() -> None:
     print("=" * 55)
     print(f"  Churn Probability       : {result['churn_probability']:.1%}")
     print(f"  Risk Band               : {result['risk_band']}")
-    from indian_currency import format_indian_currency
     print(f"  Expected Revenue Loss   : {format_indian_currency(result['expected_revenue_loss'])}")
     print("  -- Base Model Details ----------------------")
     print(f"  XGBoost probability     : {result['xgb_probability']:.4f}")
@@ -299,6 +411,27 @@ def main() -> None:
         print("\n  Medium risk - consider standard retention campaign.\n")
     else:
         print("\n  Low risk - no immediate action required.\n")
+
+    # Optional: write one-customer result directly to BI-connected CSV.
+    if args.write_csv:
+        output_csv = Path(args.write_csv).expanduser().resolve()
+        new_row_df = build_single_customer_export_row(customer, result)
+        final_df = append_or_create_prediction_csv(output_csv, new_row_df)
+        try:
+            safe_write_csv(
+                final_df,
+                output_csv,
+                columns_order=final_df.columns.tolist(),
+                verbose=True,
+                delimiter=DEFAULT_CSV_DELIMITER,
+            )
+            print(f"[predict_stacked] One-customer result appended → {output_csv} (rows={len(final_df)})")
+        except PermissionError:
+            print(
+                "[ERROR] Could not write CSV because it is locked by another app.\n"
+                f"Close the file in Power BI/Excel and retry: {output_csv}"
+            )
+            sys.exit(1)
 
 
 if __name__ == "__main__":

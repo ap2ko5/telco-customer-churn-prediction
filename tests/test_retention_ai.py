@@ -114,3 +114,37 @@ def test_call_gemini_fails_fast_on_auth_error() -> None:
         assert False, "Expected RuntimeError for Gemini auth failure"
     except RuntimeError as exc:
         assert "authentication failed" in str(exc).lower()
+
+
+def test_fallback_recommendation_uses_top_drivers(monkeypatch) -> None:
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    df = pd.DataFrame([
+        {
+            "churn_band": "Critical",
+            "churn_probability": 0.91,
+            "tenure": 1,
+            "MonthlyCharges": 101.2,
+            "Contract": "Month-to-month",
+            "PaymentMethod": "Electronic check",
+            "TechSupport": "No",
+            "OnlineSecurity": "No",
+            "top_churn_drivers": json.dumps([
+                {"feature": "Contract_Month-to-month", "impact": 0.4},
+                {"feature": "TechSupport_No", "impact": 0.3},
+            ]),
+        }
+    ])
+
+    out = generate_retention_recommendations(df)
+    rec = json.loads(out.loc[0, "retention_recommendation"])
+
+    assert set(rec.keys()) == {
+        "likely_churn_reason",
+        "risk_summary",
+        "retention_action",
+        "offer_recommendation",
+        "communication_tone",
+    }
+    assert "driver-specific steps" in rec["retention_action"].lower()
+    assert "% loyalty discount" in rec["offer_recommendation"]

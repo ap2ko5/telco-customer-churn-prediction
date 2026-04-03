@@ -1,0 +1,99 @@
+CHURN PROJECT - HOW IT WORKS (LAYMAN VERSION)
+=============================================
+
+What this project does:
+- It predicts if a telecom customer is likely to leave (churn).
+- It gives a risk level: Low / Medium / High / Critical.
+- It estimates potential money loss if the customer leaves.
+- It updates a CSV file used by Power BI dashboard.
+
+---------------------------------------------
+MAIN WAYS TO RUN
+---------------------------------------------
+
+1) FULL DATASET + POWER BI (recommended for demo)
+- Double-click: run_system.bat
+- What happens:
+  1. Reads customer dataset
+  2. Uses saved ML models to predict churn
+  3. Creates/overwrites outputs/churn_predictions.csv safely
+  4. Opens Power BI file
+
+2) ONE CUSTOMER TEST + POWER BI
+- Edit file: data/one_customer_template.json
+- Double-click: run_manual_single_to_bi.bat
+- What happens:
+  1. Predicts churn for exactly one customer from JSON
+  2. Writes one-row CSV to outputs/churn_predictions.csv
+  3. Opens Power BI
+
+---------------------------------------------
+FILES YOU SHOULD KNOW
+---------------------------------------------
+
+- data/one_customer_template.json
+  Input for one-customer manual test.
+
+- outputs/churn_predictions.csv
+  Final prediction data that Power BI reads.
+
+- run_system.bat
+  Full-project demo launcher (stable mode).
+
+- run_manual_single_to_bi.bat
+  One-customer demo launcher.
+
+---------------------------------------------
+IF SOMETHING DOESN'T OPEN
+---------------------------------------------
+
+1) Check PBIX path inside:
+   - run_system.bat
+   - run_manual_single_to_bi.bat
+
+2) Make sure Python virtual environment exists:
+   - .venv/Scripts/python.exe
+
+3) If Power BI is already open, click Refresh in Power BI.
+
+---------------------------------------------
+WHAT TO EDIT FOR A NEW CUSTOMER
+---------------------------------------------
+
+Open data/one_customer_template.json and change values, for example:
+- tenure
+- MonthlyCharges
+- Contract
+- InternetService
+- PaymentMethod
+
+Then run run_manual_single_to_bi.bat again.
+
+---------------------------------------------
+WHAT OUTPUT MEANS
+---------------------------------------------
+
+- churn_probability
+  Chance customer may leave.
+
+- churn_band
+  Risk category:
+  Low < Medium < High < Critical
+
+- expected_revenue_loss
+  Estimated money at risk if customer leaves.
+
+- expected_revenue_loss_rupees
+  Same amount, formatted in Indian rupees for easy reading.
+
+---------------------------------------------
+TIP FOR PRESENTATION
+---------------------------------------------
+
+Use this sequence:
+1. Show one_customer_template.json
+2. Change a value (example: Contract = Month-to-month)
+3. Run run_manual_single_to_bi.bat
+4. Show new prediction and risk band in Power BI
+
+This is the easiest way for non-technical viewers to understand the project.

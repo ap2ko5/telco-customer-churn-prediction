@@ -35,6 +35,7 @@ from indian_currency import format_indian_currency
 logger = logging.getLogger(__name__)
 
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+REPORT_PREDICTIONS_CSV = OUTPUTS_DIR / "churn_predictions_report.csv"
 
 # ── Design tokens ──────────────────────────────────────────────────────────────
 _BG_DARK   = "#0f1117"
@@ -69,8 +70,10 @@ def save_predictions(df: pd.DataFrame) -> None:
     ]
     ordered  = priority + [c for c in df.columns if c not in priority]
     out_cols = [c for c in ordered if c in df.columns]
-    df[out_cols].to_csv(PREDICTIONS_CSV, index=False)
-    logger.info("Predictions saved → %s", PREDICTIONS_CSV)
+    # Keep a separate report snapshot so the canonical Power BI CSV is controlled
+    # by safe_write_csv in run_demo.py.
+    df[out_cols].to_csv(REPORT_PREDICTIONS_CSV, index=False)
+    logger.info("Predictions saved → %s", REPORT_PREDICTIONS_CSV)
 
 
 # ── Step 2: Summary report ─────────────────────────────────────────────────────

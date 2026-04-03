@@ -89,7 +89,8 @@ def load_data(
     numeric_cols   : list[str]     — numeric feature column names
     categorical_cols : list[str]   — categorical feature column names
     """
-    df = pd.read_csv(csv_path)
+    # Auto-detect delimiter (supports both legacy comma files and new semicolon files).
+    df = pd.read_csv(csv_path, sep=None, engine="python")
 
     if target_col not in df.columns:
         raise ValueError(

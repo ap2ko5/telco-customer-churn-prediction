@@ -30,6 +30,10 @@ SET "PYTHON_EXE=%~dp0.venv\Scripts\python.exe"
 REM  Demo script location
 SET "DEMO_SCRIPT=%~dp0run_demo.py"
 
+REM  Reliable demo default: skip external AI dependency for faster/stable runs.
+REM  Set to empty if you want Gemini recommendations in this flow.
+SET "DEMO_ARGS=--skip-ai"
+
 REM  Fixed CSV path used by both Python and Power BI
 SET "CSV_PATH=%~dp0outputs\churn_predictions.csv"
 
@@ -47,6 +51,17 @@ echo ═════════════════════════
 echo   ⚡ CHURN INTELLIGENCE DEMO — ONE-CLICK AUTOMATION
 echo ════════════════════════════════════════════════════════════════════════════════
 echo.
+
+SET "INPUT_DATA_PATH=%~1"
+if not "%INPUT_DATA_PATH%"=="" (
+    if not exist "%INPUT_DATA_PATH%" (
+        echo ❌ ERROR: Provided dataset path does not exist:
+        echo    %INPUT_DATA_PATH%
+        echo.
+        pause
+        exit /b 1
+    )
+)
 
 REM ─ STEP 1: Verify Python ───────────────────────────────────────────────────
 
@@ -70,12 +85,22 @@ REM ─ STEP 2: Run the Python Pipeline ─────────────�
 
 echo.
 echo 🚀 Running Churn Intelligence Pipeline...
-echo    (This may take 1-5 minutes depending on data size)
+echo    (This may take 30-120 seconds depending on data size)
+echo    Mode: %DEMO_ARGS%
+if "%INPUT_DATA_PATH%"=="" (
+    echo    Data: data\customer_churn.csv
+) else (
+    echo    Data: %INPUT_DATA_PATH%
+)
 echo.
 
 pushd "%~dp0"
 set "POWERBI_CSV_PATH=%CSV_PATH%"
-call "%PYTHON_EXE%" "%DEMO_SCRIPT%"
+if "%INPUT_DATA_PATH%"=="" (
+    call "%PYTHON_EXE%" "%DEMO_SCRIPT%" %DEMO_ARGS%
+) else (
+    call "%PYTHON_EXE%" "%DEMO_SCRIPT%" %DEMO_ARGS% --data "%INPUT_DATA_PATH%"
+)
 set "PYTHON_EXIT_CODE=!ERRORLEVEL!"
 popd
 

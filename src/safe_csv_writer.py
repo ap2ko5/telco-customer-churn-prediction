@@ -10,12 +10,42 @@ target file. This ensures Power BI never reads a partial/corrupt file.
 from __future__ import annotations
 
 import logging
+import json
 import tempfile
+import time
 from pathlib import Path
 
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+DEFAULT_CSV_DELIMITER = ","
+
+# Stable, BI-friendly export schema used by both batch and single-customer flows.
+POWERBI_STABLE_COLUMNS = [
+    "churn_probability",
+    "churn_band",
+    "expected_revenue_loss",
+    "retention_recommendation",
+    "gender",
+    "SeniorCitizen",
+    "Partner",
+    "Dependents",
+    "tenure",
+    "PhoneService",
+    "MultipleLines",
+    "InternetService",
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies",
+    "Contract",
+    "PaperlessBilling",
+    "PaymentMethod",
+    "MonthlyCharges",
+    "TotalCharges",
+]
 
 
 def enforce_powerbi_schema(
@@ -85,12 +115,67 @@ def add_rupee_formatted_columns(df: pd.DataFrame) -> pd.DataFrame:
     return result_df
 
 
+def _remove_rupee_symbol_from_strings(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy with rupee symbols removed from all string/object columns."""
+    cleaned = df.copy()
+    object_cols = cleaned.select_dtypes(include=["object", "string"]).columns
+    for col in object_cols:
+        cleaned[col] = cleaned[col].str.replace("₹", "", regex=False).str.strip()
+    return cleaned
+
+
+def _sanitize_text_for_csv(df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize text fields to avoid BI parsing issues (newlines, tabs, nested objects)."""
+    cleaned = df.copy()
+    object_cols = cleaned.select_dtypes(include=["object", "string"]).columns
+    for col in object_cols:
+        series = cleaned[col]
+
+        # Convert structured python objects to compact JSON strings.
+        series = series.apply(
+            lambda v: json.dumps(v, ensure_ascii=False, separators=(",", ":"))
+            if isinstance(v, (dict, list))
+            else v
+        )
+
+        # Flatten multiline/escaped text that can confuse CSV ingestion tools.
+        series = (
+            series.astype(str)
+            .str.replace("\r", " ", regex=False)
+            .str.replace("\n", " ", regex=False)
+            .str.replace("\t", " ", regex=False)
+            .str.strip()
+        )
+
+        # Preserve empty values as empty cells instead of literal "nan" strings.
+        series = series.replace({"nan": "", "None": ""})
+        cleaned[col] = series
+
+    return cleaned
+
+
+def _strip_delimiter_from_text(df: pd.DataFrame, delimiter: str) -> pd.DataFrame:
+    """Remove delimiter characters from text columns to prevent parser column shifts."""
+    if not delimiter:
+        return df
+
+    cleaned = df.copy()
+    object_cols = cleaned.select_dtypes(include=["object", "string"]).columns
+    for col in object_cols:
+        cleaned[col] = cleaned[col].astype(str).str.replace(delimiter, " ", regex=False).str.strip()
+        cleaned[col] = cleaned[col].replace({"nan": "", "None": ""})
+    return cleaned
+
+
 def safe_write_csv(
     df: pd.DataFrame,
     output_path: str | Path,
     *,
     columns_order: list[str] | None = None,
     verbose: bool = True,
+    replace_retries: int = 5,
+    retry_wait_seconds: float = 1.0,
+    delimiter: str = DEFAULT_CSV_DELIMITER,
 ) -> Path:
     """
     Safely write a DataFrame to CSV with atomic file replacement.
@@ -146,6 +231,11 @@ def safe_write_csv(
             )
         working_df = working_df[valid_cols]
 
+    # Sanitize and normalize text fields for robust BI ingestion.
+    working_df = _sanitize_text_for_csv(working_df)
+    working_df = _remove_rupee_symbol_from_strings(working_df)
+    working_df = _strip_delimiter_from_text(working_df, delimiter)
+
     # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -160,7 +250,7 @@ def safe_write_csv(
             encoding="utf-8-sig",  # UTF-8 with BOM for Excel compatibility
         ) as tmp_file:
             tmp_path = Path(tmp_file.name)
-            working_df.to_csv(tmp_file, index=False)
+            working_df.to_csv(tmp_file, index=False, sep=delimiter)
 
         if verbose:
             logger.info(
@@ -174,29 +264,47 @@ def safe_write_csv(
         raise
 
     # Atomically replace the target file
-    try:
-        # On Windows, we need to remove the old file first if it exists
-        if output_path.exists():
-            output_path.unlink()
-        # Rename (atomic on same volume)
-        tmp_path.replace(output_path)
+    last_exc: Exception | None = None
+    for attempt in range(1, replace_retries + 1):
+        try:
+            # On Windows, we need to remove the old file first if it exists
+            if output_path.exists():
+                output_path.unlink()
+            # Rename (atomic on same volume)
+            tmp_path.replace(output_path)
 
-        if verbose:
-            logger.info(
-                "CSV file safely replaced → %s (%d rows)", output_path, len(working_df)
-            )
+            if verbose:
+                logger.info(
+                    "CSV file safely replaced → %s (%d rows)", output_path, len(working_df)
+                )
 
-        return output_path
+            return output_path
+        except PermissionError as exc:
+            last_exc = exc
+            if attempt < replace_retries:
+                logger.warning(
+                    "File is locked (attempt %d/%d). Retrying in %.1fs: %s",
+                    attempt,
+                    replace_retries,
+                    retry_wait_seconds,
+                    output_path,
+                )
+                time.sleep(retry_wait_seconds)
+                continue
+            break
+        except Exception as exc:
+            last_exc = exc
+            break
 
-    except Exception as exc:
-        # Clean up the temp file if replacement fails
-        if tmp_path.exists():
-            try:
-                tmp_path.unlink()
-            except Exception:
-                pass
-        logger.error("Failed to replace CSV file: %s", exc)
-        raise
+    # Clean up the temp file if replacement fails
+    if tmp_path.exists():
+        try:
+            tmp_path.unlink()
+        except Exception:
+            pass
+
+    logger.error("Failed to replace CSV file: %s", last_exc)
+    raise last_exc if last_exc is not None else RuntimeError("Unknown CSV replace failure")
 
 
 def safe_write_csv_with_fallback(

@@ -134,6 +134,37 @@ _PROFILE_FIELDS = (
 _HIGH_RISK_BANDS = ("High", "Critical")
 _DEFAULT_RETENTION_MESSAGE = "Standard retention — low/medium risk customer."
 
+_DRIVER_INSIGHTS = {
+    "Contract_Month-to-month": {
+        "reason": "customer is on a month-to-month plan with low switching friction",
+        "action": "offer annual migration with clear savings and one-click plan change",
+    },
+    "PaymentMethod_Electronic check": {
+        "reason": "billing method may create payment friction and low commitment",
+        "action": "propose autopay migration and simplify billing reminders",
+    },
+    "InternetService_Fiber optic": {
+        "reason": "premium service pricing can increase price sensitivity",
+        "action": "run plan-value review and identify rightsizing opportunities",
+    },
+    "TechSupport_No": {
+        "reason": "lack of proactive support can reduce perceived service value",
+        "action": "enroll customer into priority support and guided troubleshooting",
+    },
+    "OnlineSecurity_No": {
+        "reason": "missing security bundle weakens product stickiness",
+        "action": "bundle security add-on free for trial period",
+    },
+    "tenure": {
+        "reason": "early tenure indicates low habit and weaker loyalty",
+        "action": "deliver structured onboarding and success check-ins",
+    },
+    "MonthlyCharges": {
+        "reason": "higher recurring charges can trigger affordability concerns",
+        "action": "provide targeted loyalty pricing and plan optimization",
+    },
+}
+
 
 def _normalize_key(name: str) -> str:
     """Normalize column names for forgiving field matching."""
@@ -170,6 +201,20 @@ def _generate_fallback_recommendation(payload: dict) -> str:
     payment = str(profile.get("PaymentMethod", "Unknown"))
     tech_support = str(profile.get("TechSupport", "No"))
     online_security = str(profile.get("OnlineSecurity", "No"))
+    top_drivers = payload.get("top_churn_drivers", []) or []
+
+    driver_reasons: list[str] = []
+    driver_actions: list[str] = []
+    for item in top_drivers:
+        if not isinstance(item, dict):
+            continue
+        feature = str(item.get("feature", "")).strip()
+        if not feature:
+            continue
+        insight = _DRIVER_INSIGHTS.get(feature)
+        if insight:
+            driver_reasons.append(insight["reason"])
+            driver_actions.append(insight["action"])
 
     if tenure <= 3:
         churn_reason = "Customer is very new and may not have seen sustained value yet."
@@ -181,6 +226,9 @@ def _generate_fallback_recommendation(payload: dict) -> str:
         churn_reason = "Payment method may add friction versus auto-pay options."
     else:
         churn_reason = "Churn risk appears driven by a combination of service and pricing signals."
+
+    if driver_reasons:
+        churn_reason = churn_reason + " Primary model signals: " + "; ".join(dict.fromkeys(driver_reasons)) + "."
 
     risk_factors = []
     if tenure <= 6:
@@ -218,6 +266,22 @@ def _generate_fallback_recommendation(payload: dict) -> str:
     else:
         action = "Schedule a retention call to identify pain points and personalize next-best action."
         offer = "Provide a targeted loyalty offer based on usage profile and tenure."
+
+    if driver_actions:
+        action = action + " Execute driver-specific steps: " + "; ".join(dict.fromkeys(driver_actions[:3])) + "."
+
+    base_discount = 10
+    if risk_band == "Critical" or churn_probability >= 0.85:
+        base_discount = 20
+    elif churn_probability >= 0.70:
+        base_discount = 15
+    if monthly_charges >= 90:
+        base_discount += 5
+
+    offer = (
+        f"Offer {base_discount}% loyalty discount for 6 months, waive upgrade fees, "
+        f"and include a 60-day service guarantee. {offer}"
+    )
 
     tone = (
         "Urgent and empathetic"
@@ -323,19 +387,82 @@ def _apply_fallback_recommendations(df: pd.DataFrame, indices: list[int]) -> pd.
     return df
 
 
-def generate_retention_recommendations(df: pd.DataFrame) -> pd.DataFrame:
+def _generate_low_medium_recommendation(payload: dict) -> str:
+    """Generate Gemini-like structured recommendation JSON for low/medium risk rows."""
+    profile = payload.get("customer_profile", {})
+    churn_probability = float(payload.get("churn_probability", 0.0))
+    risk_band = str(payload.get("risk_band", "Unknown"))
+
+    tenure = float(profile.get("tenure", 0) or 0)
+    monthly_charges = float(profile.get("MonthlyCharges", 0) or 0)
+    contract = str(profile.get("Contract", "Unknown"))
+
+    reason = "Customer currently appears stable with manageable churn signals."
+    if risk_band == "Medium":
+        reason = "Customer has moderate early warning signals that can escalate without proactive engagement."
+    if contract == "Month-to-month":
+        reason += " Month-to-month plan still leaves room for switching risk."
+
+    summary = (
+        f"{risk_band} risk at {churn_probability:.1%}; monitor engagement and pricing fit with preventive outreach."
+    )
+
+    if risk_band == "Medium":
+        action = "Run a preventive retention touchpoint and confirm service satisfaction in the next billing cycle."
+        offer = "Offer 5-10% loyalty incentive or value add-on for 3 months to reinforce stickiness."
+    else:
+        action = "Continue light-touch engagement and monitor behavior changes via monthly check-ins."
+        offer = "No major discount needed; provide optional add-on trial to increase product adoption."
+
+    if tenure <= 3:
+        action += " Prioritize onboarding nudges for first 90 days."
+    if monthly_charges >= 80:
+        offer += " Include bill-clarity support to reduce price friction."
+
+    recommendation = {
+        "likely_churn_reason": reason,
+        "risk_summary": summary,
+        "retention_action": action,
+        "offer_recommendation": offer,
+        "communication_tone": "Supportive and proactive",
+    }
+    return json.dumps(recommendation, ensure_ascii=False)
+
+
+def generate_retention_recommendations(
+    df: pd.DataFrame,
+    *,
+    include_all_bands: bool = False,
+    force_fallback: bool = False,
+) -> pd.DataFrame:
     """
     Add 'retention_recommendation' column to df.
 
-    Only processes High and Critical risk customers.
-    All others receive a default message.
+    By default, only processes High/Critical risk customers and assigns a default
+    message to Low/Medium rows.
+
+    If include_all_bands=True, all rows get structured JSON recommendations
+    (Gemini-style schema) while High/Critical stay priority-focused.
+
+    If force_fallback=True, skip Gemini calls and use deterministic local logic.
     """
     df = df.copy()
-    df["retention_recommendation"] = _DEFAULT_RETENTION_MESSAGE
+    if include_all_bands:
+        df["retention_recommendation"] = ""
+        non_priority_indices = df[~df["churn_band"].isin(_HIGH_RISK_BANDS)].index.tolist()
+        for idx in non_priority_indices:
+            payload = _build_payload(df.loc[idx])
+            df.at[idx, "retention_recommendation"] = _generate_low_medium_recommendation(payload)
+    else:
+        df["retention_recommendation"] = _DEFAULT_RETENTION_MESSAGE
 
     api_key = os.getenv("GEMINI_API_KEY", "")
     high_risk_mask = df["churn_band"].isin(_HIGH_RISK_BANDS)
     high_risk_indices = df[high_risk_mask].index.tolist()
+
+    if force_fallback:
+        print("[retention_ai] force_fallback=True. Using local recommendations without Gemini.")
+        return _apply_fallback_recommendations(df, high_risk_indices)
 
     if not api_key or api_key == "your_gemini_api_key_here":
         print(
